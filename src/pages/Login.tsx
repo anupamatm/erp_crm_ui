@@ -7,10 +7,16 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { signIn, user } = useAuth();
+  const { signIn, user, loading } = useAuth();
 
-  if (user) {
-    return <Navigate to="/" />;
+  if (user && !loading) {
+    // Redirect based on user role
+    console.log('User:', user);
+
+    if (user.role === 'customer') {
+      return <Navigate to="/customer" replace />;
+    }
+    return <Navigate to="/" replace />;
   }
 
   const handleSubmit = async (e: React.FormEvent) => {

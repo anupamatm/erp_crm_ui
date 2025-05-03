@@ -8,6 +8,8 @@ const Signup = () => {
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const { signUp, user } = useAuth();
+  const [role, setRole] = useState('customer');
+  const [name, setName] = useState('');
 
   if (user) {
     return <Navigate to="/" />;
@@ -16,7 +18,7 @@ const Signup = () => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await signUp(email, password);
+      await signUp(name, email, password, role);
     } catch (error) {
       setError('Error creating account');
     }
@@ -38,6 +40,21 @@ const Signup = () => {
             </div>
           )}
           <div className="-space-y-px rounded-md shadow-sm">
+            <div>
+              <label htmlFor="name" className="sr-only">
+                Name
+              </label>
+              <input
+                id="name"
+                name="name"
+                type="text"
+                required
+                value={name}
+                onChange={(e) => setName(e.target.value)}
+                className="relative block w-full rounded-t-md border-0 py-1.5 px-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+                placeholder="Name"
+              />
+            </div>
             <div>
               <label htmlFor="email" className="sr-only">
                 Email address
@@ -67,6 +84,27 @@ const Signup = () => {
                 className="relative block w-full rounded-b-md border-0 py-1.5 px-3 text-gray-900 ring-1 ring-inset ring-gray-300 placeholder:text-gray-400 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
                 placeholder="Password"
               />
+            </div>
+            <div>
+              <label htmlFor="role" className="sr-only">
+                Role
+              </label>
+              <select
+                id="role"
+                name="role"
+                value={role}
+                onChange={(e) => setRole(e.target.value)}
+                className="relative block w-full rounded-md border-0 py-1.5 px-3 text-gray-900 ring-1 ring-inset ring-gray-300 focus:z-10 focus:ring-2 focus:ring-inset focus:ring-indigo-600 sm:text-sm sm:leading-6"
+              >
+                <option value="customer">Customer</option>
+                <option value="admin">Admin</option>
+                <option value="sales_manager">Sales Manager</option>
+                <option value="sales_exec">Sales Executive</option>
+                <option value="inventory_mgr">Inventory Manager</option>
+                <option value="support">Support</option>
+                <option value="hr">HR</option>
+                <option value="finance">Finance</option>
+              </select>
             </div>
           </div>
 

@@ -1,78 +1,191 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import axios from 'axios';
+import React, { createContext, useContext, useState, useEffect } from 'react';
+import { API } from './api';
 
-const API = axios.create({
-  baseURL: import.meta.env.VITE_API_URL,
-});
+interface User {
+  id: string;
+  email: string;
+  role: string;
+  name?: string;
+}
 
 interface AuthContextType {
-  user: any | null;
+  user: User | null;
   loading: boolean;
+  error: string | null;
   signIn: (email: string, password: string) => Promise<void>;
-  signUp: (email: string, password: string) => Promise<void>;
-  signOut: () => Promise<void>;
+  signUp: (email: string, password: string, name: string) => Promise<void>;
+  signOut: () => void;
+  refresh: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
-export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  const [user, setUser] = useState<any | null>(null);
-  const [loading, setLoading] = useState(true);
+export function useAuth() {
+  const context = useContext(AuthContext);
+  if (!context) {
+    throw new Error('useAuth must be used within an AuthProvider');
+  }
+  return context;
+}
 
-  useEffect(() => {
-    const token = localStorage.getItem('token');
-    if (token) {
-      setUser({ token });
+export function AuthProvider({ children }: { children: React.ReactNode }) {
+  const [user, setUser] = useState<User | null>(null);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  // Check if token is valid and refresh if needed
+  const checkToken = async () => {
+    try {
+      const token = localStorage.getItem('token');
+      if (!token) {
+        console.log('No token found');
+        setUser(null);
+        setError(null);
+        return false;
+      }
+
+      // Try to refresh token
+      try {
+        const response = await API.post('/api/auth/refresh');
+        localStorage.setItem('token', response.data.token);
+        setUser(response.data.user);
+        setError(null);
+        return true;
+      } catch (err: any) {
+        console.error('Token refresh failed:', err);
+        // If refresh fails, clear token and user
+        localStorage.removeItem('token');
+        setUser(null);
+        setError('Authentication failed');
+        return false;
+      }
+    } catch (err: any) {
+      console.error('Error checking token:', err);
+      localStorage.removeItem('token');
+      setUser(null);
+      setError('Authentication error');
+      return false;
     }
-    setLoading(false);
+  };
+
+  // Check auth on mount
+  useEffect(() => {
+    const checkAuth = async () => {
+      try {
+        setLoading(true);
+        const isValid = await checkToken();
+        if (!isValid) {
+          // Try to sign in with stored credentials if available
+          const storedEmail = localStorage.getItem('email');
+          const storedPassword = localStorage.getItem('password');
+          if (storedEmail && storedPassword) {
+            try {
+              await signIn(storedEmail, storedPassword);
+            } catch (err) {
+              console.error('Stored credentials failed:', err);
+            }
+          }
+        }
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    checkAuth();
   }, []);
 
   const signIn = async (email: string, password: string) => {
     try {
+      setLoading(true);
       const response = await API.post('/api/auth/signin', { email, password });
+      
+      if (!response.data?.token || !response.data?.user) {
+        throw new Error('Invalid login response');
+      }
+
       const token = response.data.token;
       localStorage.setItem('token', token);
-      setUser({ token });
-    } catch (error) {
-      console.error('Sign In Error', error);
+      localStorage.setItem('email', email); // Store email for auto-login
+      localStorage.setItem('password', password); // Store password for auto-login
+      
+      setUser(response.data.user);
+      setError(null);
+
+      if (!response.data.user.id || !response.data.user.role) {
+        throw new Error('Invalid user data');
+      }
+    } catch (err: any) {
+      console.error('Login failed:', err);
+      setError(err.response?.data?.message || 'Authentication error');
+      throw err;
+    } finally {
+      setLoading(false);
     }
   };
 
-  const signUp = async (email: string, password: string) => {
+  const signUp = async (email: string, password: string, name: string) => {
     try {
-      const response = await API.post('/api/auth/signup', { email, password });
+      setLoading(true);
+      const response = await API.post('/api/auth/signup', { email, password, name });
+      
+      if (!response.data?.token || !response.data?.user) {
+        throw new Error('Invalid signup response');
+      }
+
       const token = response.data.token;
       localStorage.setItem('token', token);
-      setUser({ token });
-    } catch (error) {
-      console.error('Sign Up Error', error);
+      localStorage.setItem('email', email);
+      localStorage.setItem('password', password);
+      
+      setUser(response.data.user);
+      setError(null);
+    } catch (err: any) {
+      console.error('Registration failed:', err);
+      setError(err.response?.data?.message || 'Authentication error');
+      throw err;
+    } finally {
+      setLoading(false);
     }
   };
 
-  const signOut = async () => {
+  const signOut = () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('email');
+    localStorage.removeItem('password');
     setUser(null);
+    setError(null);
+    window.location.href = '/login';
   };
 
-  const value = {
-    user,
-    loading,
-    signIn,
-    signUp,
-    signOut,
+  const refresh = async () => {
+    try {
+      setLoading(true);
+      const response = await API.post('/api/auth/refresh');
+      localStorage.setItem('token', response.data.token);
+      setUser(response.data.user);
+      setError(null);
+    } catch (err: any) {
+      console.error('Token refresh failed:', err);
+      setError(err.response?.data?.message || 'Authentication error');
+      throw err;
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
-    <AuthContext.Provider value={value}>
-      {loading ? <div>Loading...</div> : children}
+    <AuthContext.Provider
+      value={{
+        user,
+        loading,
+        error,
+        signIn,
+        signUp,
+        signOut,
+        refresh
+      }}
+    >
+      {children}
     </AuthContext.Provider>
   );
-};
-
-export const useAuth = () => {
-  const context = useContext(AuthContext);
-  if (context === undefined) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
-  return context;
-};
+}
