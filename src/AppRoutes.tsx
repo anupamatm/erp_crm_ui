@@ -29,13 +29,15 @@ import OpportunityForm from './pages/Sales/OpportunityForm';
 import SalesLayout from './pages/Sales/SalesLayout';
 import LeadsLayout from './pages/Leads/LeadsLayout';
 
-import { Building2,
-   Users, ShoppingCart,
-    BarChart3, Settings as SettingsIcon, 
-    Box,
-    FileText,
-    DollarSign,
-    User} from 'lucide-react';
+import {
+  Building2,
+  Users, ShoppingCart,
+  BarChart3, Settings as SettingsIcon,
+  Box,
+  FileText,
+  DollarSign,
+  User
+} from 'lucide-react';
 import LeadStats from './pages/Leads/LeadStats';
 import LeadDashboard from './pages/Leads/LeadDashboard';
 import LeadStatus from './pages/Leads/LeadStats';
@@ -45,6 +47,8 @@ import LeadForm from './pages/Leads/LeadForm';
 import LeadDetail from './pages/Leads/LeadDetail';
 import { useParams } from 'react-router-dom';
 import OrderDetails from './pages/Sales/OrderDetails';
+import UserList from './pages/UserManagement/UserList';
+import UserForm from './pages/UserManagement/UserForm';
 
 const adminNavigation = [
   { name: 'Dashboard', href: '/', icon: Building2, roles: ['admin'] },
@@ -53,7 +57,8 @@ const adminNavigation = [
   { name: 'Sales', href: '/sales', icon: ShoppingCart, roles: ['admin'] },
   { name: 'Leads', href: '/leads', icon: BarChart3, roles: ['admin', 'sales_manager', 'sales_exec'] },
   { name: 'Settings', href: '/settings', icon: SettingsIcon, roles: ['admin'] },
- 
+  { name: 'User Management', href: '/users', icon: Users, roles: ['admin'] },
+
 
 ];
 
@@ -79,6 +84,12 @@ export default function AppRoutes() {
       <Route element={<ProtectedRoute roles={['admin', 'sales_manager', 'sales_exec', 'inventory_mgr', 'support', 'hr', 'finance']} />}>
         <Route path="/" element={<Layout navigation={adminNavigation} />}>
           <Route index element={<Dashboard />} />
+
+          <Route path="users">
+            <Route index element={<UserList />} />
+            <Route path="new" element={<UserForm />} />
+          </Route>
+
           <Route path="customers" element={<Customers />} />
           <Route path="customers/new" element={<CustomerForm />} />
           <Route path="customers/:id" element={<CustomerView />} />
@@ -88,7 +99,7 @@ export default function AppRoutes() {
           <Route path="products/new" element={<ProductForm />} />
           <Route path="products/:id/edit" element={<ProductForm />} />
 
-          
+
           <Route path="settings" element={<SettingsPage />} />
           <Route path="leads" element={<LeadsLayout />}>
             <Route index element={<LeadDashboard />} />
@@ -97,6 +108,7 @@ export default function AppRoutes() {
             <Route path=":id/edit" element={
               <LeadForm lead={useParams().id ? { _id: useParams().id } : undefined} />
             } />
+
           </Route>
         </Route>
       </Route>
@@ -111,7 +123,7 @@ export default function AppRoutes() {
           <Route path="profile" element={<MyProfile />} />
         </Route>
       </Route>
-      
+
       {/* sales protected */}
       <Route element={<ProtectedRoute roles={['admin', 'sales_manager', 'sales_exec']} />}>
         <Route path="/" element={<Layout navigation={adminNavigation} />}>
@@ -125,8 +137,8 @@ export default function AppRoutes() {
             <Route path="invoices" element={<Invoices />} />
             <Route path="reports" element={<Reports />} />
           </Route>
-           {/* Leads Module */}
-           <Route path="leads" element={<LeadsLayout />}>
+          {/* Leads Module */}
+          <Route path="leads" element={<LeadsLayout />}>
             <Route index element={<LeadDashboard />} />
             <Route path="sources" element={<LeadSources />} />
             <Route path="status" element={<LeadStatus />} />
@@ -137,12 +149,12 @@ export default function AppRoutes() {
               <LeadForm lead={useParams().id ? { _id: useParams().id } : undefined} />
             } />
           </Route>
-         
+
         </Route>
-        
+
       </Route>
 
-      
+
 
       {/* Fallback */}
       <Route path="*" element={<Navigate to="/login" replace />} />
