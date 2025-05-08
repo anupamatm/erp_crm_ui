@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import LeadService from '../../services/leadService';
 import { Lead } from '../../types/Lead';
+import { userApi } from '../../services/userService';
 
 interface User {
   _id: string;
@@ -33,12 +34,13 @@ const AssignLead = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await fetch('/api/users');
-      const data = await response.json();
+      const data = await userApi.getUsers();
       setUsers(data);
     } catch (error) {
       console.error('Error fetching users:', error);
       alert('Failed to fetch users');
+    } finally {
+      setLoading(false);
     }
   };
 
