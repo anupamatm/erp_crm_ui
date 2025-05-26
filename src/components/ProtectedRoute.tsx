@@ -7,7 +7,7 @@ interface ProtectedRouteProps {
   roles: string[];
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ roles }) => {
+const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ roles }) => {
   const { user, loading, error } = useAuth();
 
   if (loading && !['/login', '/signup'].includes(window.location.pathname)) {
@@ -34,6 +34,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ roles }) => {
     return <Navigate to="/unauthorized" replace />;
   }
 
-  // **This is the magic**—render the child routes here
   return <Outlet />;
 };
+
+export default ProtectedRoute;

@@ -1,7 +1,7 @@
 // src/AppRoutes.tsx
 import React, { useState } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { ProtectedRoute } from './components/ProtectedRoute';
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import  ProtectedRoute  from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -83,7 +83,8 @@ export default function AppRoutes() {
       {/* Admin protected */}
       <Route element={<ProtectedRoute roles={['admin', 'sales_manager', 'sales_exec', 'inventory_mgr', 'support', 'hr', 'finance']} />}>
         <Route path="/" element={<Layout navigation={adminNavigation} />}>
-          <Route index element={<Dashboard />} />
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route path="dashboard" element={<Dashboard />} />
 
           <Route path="users">
             <Route index element={<UserList />} />
@@ -101,15 +102,7 @@ export default function AppRoutes() {
 
 
           <Route path="settings" element={<SettingsPage />} />
-          <Route path="leads" element={<LeadsLayout />}>
-            <Route index element={<LeadDashboard />} />
-            <Route path="new" element={<LeadForm />} />
-            <Route path=":id" element={<LeadDetail />} />
-            <Route path=":id/edit" element={
-              <LeadForm lead={useParams().id ? { _id: useParams().id } : undefined} />
-            } />
-
-          </Route>
+    
         </Route>
       </Route>
 
