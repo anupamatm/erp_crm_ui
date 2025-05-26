@@ -22,7 +22,7 @@ export default function MyInvoices() {
   useEffect(() => {
     const fetchInvoices = async () => {
       try {
-        const response = await API.get(`/api/customers/${user?._id}/invoices`);
+        const response = await API.get(`/api/customers/${user?.id}/invoices`);
         setInvoices(response.data);
       } catch (err) {
         setError('Failed to fetch invoices');
@@ -32,10 +32,10 @@ export default function MyInvoices() {
       }
     };
 
-    if (user?._id) {
+    if (user?.id) {
       fetchInvoices();
     }
-  }, [user?._id]);
+  }, [user?.id]);
 
   const getStatusColor = (status: string) => {
     switch (status.toLowerCase()) {

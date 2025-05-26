@@ -11,6 +11,22 @@ interface Product {
 }
 
 class ProductService {
+  // Fetch total number of products
+  static async getTotalProducts() {
+    try {
+      const response = await API.get('/api/products');
+      // Use pagination.totalItems if present
+      if (response.data.pagination && typeof response.data.pagination.totalItems === 'number') {
+        return response.data.pagination.totalItems;
+      }
+      if (Array.isArray(response.data.data)) {
+        return response.data.data.length;
+      }
+      return 0;
+    } catch (error: any) {
+      throw new Error(error.response?.data?.message || 'Error fetching product count');
+    }
+  }
   // Fetch products with pagination
   static async getProducts(page: number = 1) {
     try {

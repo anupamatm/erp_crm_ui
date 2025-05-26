@@ -49,6 +49,9 @@ import { useParams } from 'react-router-dom';
 import OrderDetails from './pages/Sales/OrderDetails';
 import UserList from './pages/UserManagement/UserList';
 import UserForm from './pages/UserManagement/UserForm';
+import Finance from './pages/Finance/FinanceIndex';
+import Transactions from './pages/Finance/Transactions';
+import Payments from './pages/Finance/Payments';
 
 const adminNavigation = [
   { name: 'Dashboard', href: '/', icon: Building2, roles: ['admin'] },
@@ -56,8 +59,10 @@ const adminNavigation = [
   { name: 'Products', href: '/products', icon: Box, roles: ['admin'] },
   { name: 'Sales', href: '/sales', icon: ShoppingCart, roles: ['admin'] },
   { name: 'Leads', href: '/leads', icon: BarChart3, roles: ['admin', 'sales_manager', 'sales_exec'] },
-  { name: 'Settings', href: '/settings', icon: SettingsIcon, roles: ['admin'] },
+  
   { name: 'User Management', href: '/users', icon: Users, roles: ['admin'] },
+  { name: 'Finance', href: '/finance', icon: DollarSign, roles: ['admin', 'finance'] },
+  { name: 'Settings', href: '/settings', icon: SettingsIcon, roles: ['admin'] },
 
 
 ];
@@ -80,7 +85,7 @@ export default function AppRoutes() {
       <Route path="/signup" element={<Signup />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
 
-      {/* Admin protected */}
+     
       <Route element={<ProtectedRoute roles={['admin', 'sales_manager', 'sales_exec', 'inventory_mgr', 'support', 'hr', 'finance']} />}>
         <Route path="/" element={<Layout navigation={adminNavigation} />}>
           <Route index element={<Dashboard />} />
@@ -99,6 +104,10 @@ export default function AppRoutes() {
           <Route path="products/new" element={<ProductForm />} />
           <Route path="products/:id/edit" element={<ProductForm />} />
 
+          <Route path="/finance" element={<Finance />} />
+      <Route path="/finance/transactions" element={<Transactions />} />
+      <Route path="/finance/invoices" element={<Invoices />} />
+      <Route path="/finance/payments" element={<Payments />} />
 
           <Route path="settings" element={<SettingsPage />} />
           <Route path="leads" element={<LeadsLayout />}>
