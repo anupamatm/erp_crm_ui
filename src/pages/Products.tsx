@@ -35,11 +35,16 @@ const Products = () => {
     try {
       setLoading(true);
       const response = await API.get(`/api/products?page=${page}&limit=${limit}`);
-      setProducts(response.data.data);
-      setTotalPages(response.data.pagination.totalPages);
-      setTotalItems(response.data.pagination.totalItems);
+      if (response.data && response.data.data) {
+        setProducts(response.data.data);
+        setTotalPages(response.data.pagination?.totalPages || 1);
+        setTotalItems(response.data.pagination?.totalItems || 0);
+      } else {
+        throw new Error('Invalid response format');
+      }
     } catch (err: any) {
       setError(err.response?.data?.error || 'Error fetching products');
+      console.error('Products fetch error:', err);
     } finally {
       setLoading(false);
     }
@@ -47,7 +52,7 @@ const Products = () => {
 
   useEffect(() => {
     fetchProducts();
-  }, [page]);
+  }, [page, limit]);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this product?')) return;

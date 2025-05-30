@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { Navigate } from 'react-router-dom';
 import { API } from './api';
 
 interface User {
@@ -12,6 +11,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  initialLoad: boolean;
   error: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
@@ -80,12 +80,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Clear user state but don't redirect immediately
           setUser(null);
           setError('Authentication required');
-        } else {
-          // Set initial load to false only after successful auth
-          setInitialLoad(false);
         }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        setUser(null);
+        setError('Authentication check failed');
       } finally {
         setLoading(false);
+        setInitialLoad(false);
       }
     };
 
@@ -168,14 +170,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, error, signIn, signUp, signOut, refresh }}>
+    <AuthContext.Provider value={{ user, loading, initialLoad, error, signIn, signUp, signOut, refresh }}>
       {initialLoad ? (
-      <div className="flex items-center justify-center min-h-screen">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
-      </div>
-    ) : (
-      children
-    )}
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        </div>
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   );
   
