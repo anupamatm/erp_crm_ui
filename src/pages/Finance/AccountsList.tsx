@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Download, Filter, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { Search, Plus, Download, Filter, ChevronDown, ChevronUp, X, Loader2 } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
@@ -8,6 +8,24 @@ import { Badge } from '../../components/ui/badge';
 import { formatCurrency } from '../../lib/utils';
 import { financeService } from '../../services/financeService';
 import { useToast } from '../../components/ui/use-toast';
+// Custom debounce implementation with cancel method
+const debounce = <F extends (...args: any[]) => any>(func: F, wait: number) => {
+  let timeout: NodeJS.Timeout | null = null;
+  
+  const debounced = (...args: Parameters<F>) => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+  
+  debounced.cancel = () => {
+    if (timeout) {
+      clearTimeout(timeout);
+      timeout = null;
+    }
+  };
+  
+  return debounced;
+};
 
 interface Account {
   _id: string;
@@ -28,12 +46,33 @@ const AccountsList = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
   const pageSize = 10;
 
+  // Debounced fetch function
+  const debouncedFetch = useCallback(
+    debounce((search: string) => {
+      setSearchTerm(search);
+      setCurrentPage(1); // Reset to first page on new search
+    }, 500),
+    []
+  );
+
+  // Update search term when input changes (debounced)
+  useEffect(() => {
+    debouncedFetch(searchInput);
+    
+    // Cleanup function to cancel any pending debounced calls
+    return () => {
+      debouncedFetch.cancel();
+    };
+  }, [searchInput, debouncedFetch]);
+
+  // Fetch accounts when pagination or search term changes
   useEffect(() => {
     fetchAccounts();
   }, [currentPage, searchTerm]);
@@ -41,21 +80,34 @@ const AccountsList = () => {
   const fetchAccounts = async () => {
     try {
       setLoading(true);
-      const response = await financeService.getAccounts({
+      const { data, total } = await financeService.getAccounts({
         page: currentPage,
         limit: pageSize,
         search: searchTerm,
       });
-      console.log('API *********:', response);
-      setAccounts(response.data || []);
-      setTotalPages(Math.ceil(response.total || 0 / pageSize));
+      
+      console.log('API Response:', { data, total });
+      
+      setAccounts(Array.isArray(data) ? data : []);
+      
+      // Ensure we have a valid total count
+      const totalCount = typeof total === 'number' ? total : (Array.isArray(data) ? data.length : 0);
+      const calculatedPages = Math.ceil(totalCount / pageSize) || 1;
+      
+      setTotalPages(calculatedPages);
+      
+      // If current page is greater than total pages, reset to first page
+      if (currentPage > calculatedPages && calculatedPages > 0) {
+        setCurrentPage(1);
+      }
+      
     } catch (error) {
       console.error('Error fetching accounts:', error);
       setAccounts([]);
       setTotalPages(1);
       toast({
         title: 'Error',
-        description: 'Failed to load accounts',
+        description: error instanceof Error ? error.message : 'Failed to load accounts',
         variant: 'destructive',
       });
     } finally {
@@ -65,8 +117,20 @@ const AccountsList = () => {
 
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
+    setSearchTerm(searchInput);
     setCurrentPage(1);
-    fetchAccounts();
+  };
+
+  const handleSearchInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchInput(value);
+    // debouncedFetch is called in the effect that watches searchInput
+  };
+
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchTerm('');
+    setCurrentPage(1);
   };
 
   const handleDelete = async (id: string) => {
@@ -166,14 +230,49 @@ const AccountsList = () => {
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
               type="search"
-              placeholder="Search accounts..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              placeholder="Search by name or description..."
+              className="pl-8 pr-8"
+              value={searchInput}
+              onChange={handleSearchInputChange}
             />
+            {searchInput && (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon"
+                className="absolute right-0 top-0 h-8 w-8 p-0"
+                onClick={handleClearSearch}
+              >
+                <X className="h-4 w-4" />
+                <span className="sr-only">Clear search</span>
+              </Button>
+            )}
           </div>
-          <Button type="submit" variant="outline">
-            Search
+          <Button 
+            type="submit" 
+            variant="outline"
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Searching...
+              </>
+            ) : (
+              'Search'
+            )}
+          </Button>
+          <Button 
+            type="button" 
+            variant="outline"
+            onClick={() => {
+              setSearchInput('');
+              setSearchTerm('');
+              setCurrentPage(1);
+            }}
+            disabled={!searchTerm && !searchInput}
+          >
+            Reset
           </Button>
           <Button type="button" variant="outline">
             <Download className="mr-2 h-4 w-4" />
