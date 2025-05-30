@@ -58,6 +58,7 @@ import OrderDetails from './pages/Sales/OrderDetails';
 import UserList from './pages/UserManagement/UserList';
 import UserForm from './pages/UserManagement/UserForm';
 import FinanceDashboard from './pages/Finance/FinanceDashboard';
+import Accounts from './pages/Finance/Accounts';
 
 const adminNavigation = [
   { name: 'Dashboard', href: '/dashboard', icon: Building2, roles: ['admin'] },

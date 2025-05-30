@@ -46,6 +46,7 @@ const AccountsList = () => {
         limit: pageSize,
         search: searchTerm,
       });
+      console.log('API *********:', response);
       setAccounts(response.data || []);
       setTotalPages(Math.ceil(response.total || 0 / pageSize));
     } catch (error) {

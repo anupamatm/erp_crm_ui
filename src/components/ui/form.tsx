@@ -1,6 +1,7 @@
 // src/components/ui/form.tsx
-import { useForm, FormProvider, useFormContext } from "react-hook-form";
+import { useForm, FormProvider, useFormContext ,Controller} from "react-hook-form";
 import { cn } from "../../lib/utils";
+
 
 interface FormProps extends React.FormHTMLAttributes<HTMLFormElement> {
   children: React.ReactNode;
@@ -19,8 +20,13 @@ export const Form: React.FC<FormProps> = ({ onSubmit, children, ...props }) => {
   );
 };
 
-export const FormItem: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return <div className="space-y-2">{children}</div>;
+interface FormItemProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+export const FormItem: React.FC<FormItemProps> = ({ children, className }) => {
+  return <div className={cn("space-y-2", className)}>{children}</div>;
 };
 
 export const FormLabel: React.FC<{
@@ -35,25 +41,50 @@ export const FormLabel: React.FC<{
   );
 };
 
-export const FormControl: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return <div className="mt-1">{children}</div>;
+interface FormControlProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+export const FormControl: React.FC<FormControlProps> = ({ children, className }) => {
+  return <div className={cn("mt-1", className)}>{children}</div>;
 };
 
-export const FormDescription: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return <p className="text-sm text-muted-foreground">{children}</p>;
+interface FormDescriptionProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+export const FormDescription: React.FC<FormDescriptionProps> = ({ children, className }) => {
+  return <p className={cn("text-sm text-muted-foreground", className)}>{children}</p>;
 };
 
-export const FormMessage: React.FC<{ children: React.ReactNode }> = ({ children }) => {
-  return <p className="text-sm text-destructive">{children}</p>;
+interface FormMessageProps {
+  children: React.ReactNode;
+  className?: string;
+}
+
+export const FormMessage: React.FC<FormMessageProps> = ({ children, className }) => {
+  return <p className={cn("text-sm text-destructive", className)}>{children}</p>;
 };
 
-export const FormField = ({
-  name,
-  render,
-}: {
+interface FormFieldProps {
   name: string;
-  render: (field: any) => React.ReactNode;
-}) => {
-  const { control } = useFormContext();
-  return render({ name, control });
-};
+  render: (props: { field: any; fieldState: any; formState: any }) => React.ReactNode;
+}
+
+export function FormField({ name, render }: FormFieldProps) {
+  const { control, formState } = useFormContext();
+  
+  return (
+    <Controller
+      name={name}
+      control={control}
+      render={({ field, fieldState }) => (
+        <>
+          {render({ field, fieldState, formState })}
+        </>
+      )}
+    />
+  );
+}

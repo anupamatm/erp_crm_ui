@@ -1,16 +1,29 @@
 export type AccountType = 'Income' | 'Expense' | 'Asset' | 'Liability' | 'Equity';
 export type TransactionType = 'Income' | 'Expense' | 'Transfer';
 
+// In types/Finance.ts
 export interface Account {
   _id: string;
   name: string;
   type: AccountType;
   code?: string;
   description?: string;
-  balance: number;
   currency: string;
+  initialBalance?: number;
+  openingBalance?: number;
+  currentBalance?: number;
   isActive: boolean;
+  accountNumber?: string;
+  bankName?: string;
+  branch?: string;
+  ifscCode?: string;
+  swiftCode?: string;
+  taxId?: string;
+  notes?: string;
+  email?: string;
+  website?: string;
   parentAccount?: string;
+  transactions?: any[]; // Add this line
   createdAt: string;
   updatedAt: string;
 }

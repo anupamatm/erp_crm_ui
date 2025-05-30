@@ -1,55 +1,56 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
-import { useForm } from 'react-hook-form';
+import { useForm, FormProvider, SubmitHandler } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
-import { ArrowLeft, Save } from 'lucide-react';
-import { AccountType } from '../../types/Finance';
-import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
-import { Textarea } from '../../components/ui/textarea';
-import {
-  Form,
-  FormControl,
-  FormDescription,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from '../../components/ui/form';
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from '../../components/ui/select';
+import { Button } from '../../components/ui/button';
+import { Card, CardHeader, CardContent, CardTitle } from '../../components/ui/card';
+import { cn } from '../../lib/utils';
+import { FormField, FormItem, FormLabel, FormControl, FormMessage } from '../../components/ui/form';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select';
 import { Switch } from '../../components/ui/switch';
-import { useToast } from '../../components/ui/use-toast';
+import { Textarea } from '../../components/ui/textarea';
 import { financeService } from '../../services/financeService';
+import { ArrowLeft } from 'lucide-react';
 
-const accountSchema = z.object({
+// Validation schema
+const accountFormSchema = z.object({
+  // Basic Information
   name: z.string().min(1, 'Name is required'),
-  type: z.enum(['Income', 'Expense', 'Asset', 'Liability', 'Equity']) as z.ZodEnum<AccountType>,
-  currency: z.string().min(1, 'Currency is required'),
-  initialBalance: z.number().default(0),
   description: z.string().optional(),
+  type: z.enum(['Income', 'Expense', 'Asset', 'Liability', 'Equity']),
+  currency: z.string().min(1, 'Currency is required'),
+  
+  // Balance Information
+  initialBalance: z.coerce.number().default(0),
+  openingBalance: z.coerce.number().default(0),
+  currentBalance: z.coerce.number().default(0),
+  
+  // Account Status
   isActive: z.boolean().default(true),
+  
+  // Bank Details
   accountNumber: z.string().optional(),
   bankName: z.string().optional(),
-  routingNumber: z.string().optional(),
-  iban: z.string().optional(),
+  branch: z.string().optional(),
+  ifscCode: z.string().optional(),
   swiftCode: z.string().optional(),
+  
+  // Additional Information
   taxId: z.string().optional(),
-  billingAddress: z.string().optional(),
-  contactPerson: z.string().optional(),
-  phone: z.string().optional(),
-  email: z.string().email('Invalid email').optional(),
-  website: z.string().url('Invalid URL').optional(),
   notes: z.string().optional(),
+  email: z.string().email('Invalid email').optional().or(z.literal('')),
+  website: z.string().url('Invalid URL').optional().or(z.literal('')),
+  phone: z.string().optional(),
 });
 
-type AccountFormValues = z.infer<typeof accountSchema>;
+type AccountFormData = z.infer<typeof accountFormSchema>;
+
+interface AccountsFormProps {
+  account?: AccountFormData;
+  onSuccess?: () => void;
+}
 
 const CURRENCIES = [
   { code: 'USD', name: 'US Dollar' },
@@ -64,471 +65,476 @@ const CURRENCIES = [
 ];
 
 const ACCOUNT_TYPES = [
-  { value: 'Income', label: 'Income' },
-  { value: 'Expense', label: 'Expense' },
   { value: 'Asset', label: 'Asset' },
   { value: 'Liability', label: 'Liability' },
   { value: 'Equity', label: 'Equity' },
+  { value: 'Income', label: 'Income' },
+  { value: 'Expense', label: 'Expense' },
 ];
 
-const AccountsForm = () => {
-  const { id } = useParams();
-  const isEditMode = !!id;
+const AccountsForm = ({ account, onSuccess }: AccountsFormProps) => {
   const navigate = useNavigate();
-  const { toast } = useToast();
-  const [loading, setLoading] = useState(false);
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [, setError] = useState('');
+  const [, setAccountData] = useState<AccountFormData | null>(null);
 
-  const form = useForm<AccountFormValues>({
-    resolver: zodResolver(accountSchema),
+  const form = useForm<AccountFormData>({
+    resolver: zodResolver(accountFormSchema),
     defaultValues: {
       name: '',
       type: 'Asset',
       currency: 'USD',
       initialBalance: 0,
-      description: '',
+      openingBalance: 0,
+      currentBalance: 0,
       isActive: true,
-    },
+      accountNumber: '',
+      bankName: '',
+      branch: '',
+      ifscCode: '',
+      swiftCode: '',
+      taxId: '',
+      notes: '',
+      description: '',
+      email: '',
+      website: '',
+      phone: '',
+      ...account // Spread existing account data if provided
+    }
   });
 
+  const { handleSubmit, formState: { isSubmitting } } = form;
+  const { id } = useParams();
+  const isEditMode = Boolean(id);
+
   useEffect(() => {
-    const fetchAccount = async () => {
-      if (!isEditMode || !id) return;
+    if (isEditMode && id) {
+      const fetchAccount = async () => {
+        try {
+          setIsLoading(true);
+          const data = await financeService.getAccountById(id);
+          setAccountData(data);
+          form.reset(data);
+        } catch (err) {
+          setError('Failed to load account');
+          console.error(err);
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      fetchAccount();
+    }
+  }, [id, isEditMode, form]);
 
-      try {
-        setLoading(true);
-        const account = await financeService.getAccount(id);
-        form.reset({
-          ...account,
-          // Map any API-specific fields to form field names if needed
-        });
-      } catch (error) {
-        console.error('Error fetching account:', error);
-        toast({
-          title: 'Error',
-          description: 'Failed to load account data',
-          variant: 'destructive',
-        });
-        navigate('/finance/accounts');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchAccount();
-  }, [id, isEditMode, form, navigate, toast]);
-
-  const onSubmit = async (data: AccountFormValues) => {
+  const onSubmit: SubmitHandler<AccountFormData> = async (data) => {
     try {
-      setIsSubmitting(true);
-      
+      setIsLoading(true);
       if (isEditMode && id) {
         await financeService.updateAccount(id, data);
-        toast({
-          title: 'Success',
-          description: 'Account updated successfully',
-        });
       } else {
         await financeService.createAccount(data);
-        toast({
-          title: 'Success',
-          description: 'Account created successfully',
-        });
       }
-      
+      onSuccess?.();
       navigate('/finance/accounts');
-    } catch (error) {
-      console.error('Error saving account:', error);
-      toast({
-        title: 'Error',
-        description: 'Failed to save account',
-        variant: 'destructive',
-      });
+    } catch (err) {
+      setError('Failed to save account');
+      console.error(err);
     } finally {
-      setIsSubmitting(false);
+      setIsLoading(false);
     }
   };
 
-  if (loading) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500"></div>
-      </div>
-    );
+  if (isLoading) {
+    return <div>Loading...</div>;
   }
 
   return (
-    <div className="space-y-6">
-      <div className="flex items-center justify-between">
-        <div className="flex items-center space-x-4">
-          <Button
-            variant="outlined"
-            size="icon"
-            onClick={() => navigate('/finance/accounts')}
-          >
-            <ArrowLeft className="h-4 w-4" />
-          </Button>
-          <h2 className="text-2xl font-bold">
-            {isEditMode ? 'Edit Account' : 'New Account'}
-          </h2>
-        </div>
+    <div className="container mx-auto p-6">
+      <div className="flex items-center gap-4 mb-6">
+        <Button variant="text" size="small" onClick={() => navigate('/finance/accounts')}>
+          <ArrowLeft className="h-5 w-5" />
+        </Button>
+        <h1 className="text-2xl font-bold">{isEditMode ? 'Edit Account' : 'Create Account'}</h1>
       </div>
 
-      <Form {...form}>
-        <form onSubmit={form.handleSubmit(onSubmit as any)} className="space-y-6">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Basic Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Basic Information</h3>
-              <FormField
-                control={form.control}
-                name="name"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Account Name *</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Business Checking" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="type"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Account Type *</FormLabel>
-                      <Select onValueChange={field?.onChange} defaultValue={field?.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select account type" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {ACCOUNT_TYPES.map((type) => (
-                            <SelectItem key={type.value} value={type.value}>
-                              {type.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-
-                <FormField
-                  control={form.control}
-                  name="currency"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Currency *</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
-                        <FormControl>
-                          <SelectTrigger>
-                            <SelectValue placeholder="Select currency" />
-                          </SelectTrigger>
-                        </FormControl>
-                        <SelectContent>
-                          {CURRENCIES.map((currency) => (
-                            <SelectItem key={currency.code} value={currency.code}>
-                              {currency.name} ({currency.code})
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
-              </div>
-
-              <FormField
-                control={form.control}
-                name="initialBalance"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Initial Balance</FormLabel>
-                    <FormControl>
-                      <Input
-                        type="number"
-                        step="0.01"
-                        placeholder="0.00"
-                        {...field}
-                        onChange={(e) => field.onChange(parseFloat(e.target.value) || 0)}
+      <FormProvider {...form}>
+        <form onSubmit={handleSubmit(onSubmit)}>
+          <Card>
+            <CardHeader>
+              <CardTitle>Account Information</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-6">
+                {/* Basic Information Section */}
+                <Card>
+                  <CardHeader>
+                    <div className="text-lg font-semibold">Basic Information</div>
+                  </CardHeader>
+                  <CardContent className="p-6 pt-0">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FormField
+                        name="name"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel htmlFor="name">Account Name *</FormLabel>
+                            <FormControl>
+                              <Input id="name" placeholder="Enter account name" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
-              <FormField
-                control={form.control}
-                name="description"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Description</FormLabel>
-                    <FormControl>
-                      <Textarea
-                        placeholder="Enter a brief description"
-                        className="resize-none"
-                        {...field}
+                      <FormField
+                        name="type"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel htmlFor="type">Account Type *</FormLabel>
+                            <FormControl>
+                              <Select value={field.value} onValueChange={field.onChange}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select account type" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {ACCOUNT_TYPES.map((type) => (
+                                    <SelectItem key={type.value} value={type.value}>
+                                      {type.label}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
-              <FormField
-                control={form.control}
-                name="isActive"
-                render={({ field }) => (
-                  <FormItem className="flex flex-row items-center justify-between rounded-lg border p-4">
-                    <div className="space-y-0.5">
-                      <FormLabel className="text-base">Account Status</FormLabel>
-                      <FormDescription>
-                        {field.value
-                          ? 'This account is active and can be used for transactions.'
-                          : 'This account is inactive and cannot be used for transactions.'}
-                      </FormDescription>
+                      <FormField
+                        name="currency"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel htmlFor="currency">Currency *</FormLabel>
+                            <FormControl>
+                              <Select value={field.value} onValueChange={field.onChange}>
+                                <SelectTrigger>
+                                  <SelectValue placeholder="Select currency" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {CURRENCIES.map((currency) => (
+                                    <SelectItem key={currency.code} value={currency.code}>
+                                      {currency.name}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <div className="flex items-center justify-between rounded-lg border p-4">
+                        <div className="space-y-0.5">
+                          <FormLabel htmlFor="isActive">Account Status</FormLabel>
+                          <p className="text-sm text-muted-foreground">
+                            {form.watch('isActive') ? 'Active' : 'Inactive'}
+                          </p>
+                        </div>
+                        <FormField
+                          name="isActive"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormControl>
+                                <Switch
+                                  checked={field.value}
+                                  onCheckedChange={field.onChange}
+                                />
+                              </FormControl>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
                     </div>
-                    <FormControl>
-                      <Switch
-                        checked={field.value}
-                        onCheckedChange={field.onChange}
+                  </CardContent>
+                </Card>
+
+                {/* Balance Information */}
+                <Card>
+                  <CardHeader>
+                    <div className="text-lg font-semibold">Balance Information</div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="p-6 pt-0">
+                      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+                        <FormField
+                          name="initialBalance"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel htmlFor="initialBalance">Initial Balance</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  id="initialBalance" 
+                                  type="number" 
+                                  step="0.01"
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          name="openingBalance"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel htmlFor="openingBalance">Opening Balance</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  id="openingBalance" 
+                                  type="number" 
+                                  step="0.01"
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          name="currentBalance"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel htmlFor="currentBalance">Current Balance</FormLabel>
+                              <FormControl>
+                                <Input 
+                                  id="currentBalance" 
+                                  type="number" 
+                                  step="0.01"
+                                  disabled
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormMessage />
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Bank Details */}
+                <Card>
+                  <CardHeader>
+                    <div className="text-lg font-semibold">Bank Details</div>
+                  </CardHeader>
+                  <CardContent className="p-6 pt-0">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FormField
+                        name="bankName"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel htmlFor="bankName">Bank Name</FormLabel>
+                            <FormControl>
+                              <Input id="bankName" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
                       />
-                    </FormControl>
-                  </FormItem>
-                )}
-              />
-            </div>
 
-            {/* Bank Information */}
-            <div className="space-y-4">
-              <h3 className="text-lg font-medium">Bank Information</h3>
-              
-              <FormField
-                control={form.control}
-                name="bankName"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Bank Name</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., Chase Bank" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      <FormField
+                        name="branch"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel htmlFor="branch">Branch</FormLabel>
+                            <FormControl>
+                              <Input id="branch" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-              <FormField
-                control={form.control}
-                name="accountNumber"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Account Number</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., 1234567890" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
+                      <FormField
+                        name="accountNumber"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel htmlFor="accountNumber">Account Number</FormLabel>
+                            <FormControl>
+                              <Input id="accountNumber" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-              <div className="grid grid-cols-2 gap-4">
-                <FormField
-                  control={form.control}
-                  name="routingNumber"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>Routing Number</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., 021000021" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                      <FormField
+                        name="ifscCode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel htmlFor="ifscCode">IFSC Code</FormLabel>
+                            <FormControl>
+                              <Input id="ifscCode" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
 
-                <FormField
-                  control={form.control}
-                  name="swiftCode"
-                  render={({ field }) => (
-                    <FormItem>
-                      <FormLabel>SWIFT/BIC Code</FormLabel>
-                      <FormControl>
-                        <Input placeholder="e.g., CHASUS33" {...field} />
-                      </FormControl>
-                      <FormMessage />
-                    </FormItem>
-                  )}
-                />
+                      <FormField
+                        name="swiftCode"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel htmlFor="swiftCode">SWIFT Code</FormLabel>
+                            <FormControl>
+                              <Input id="swiftCode" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        name="taxId"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel htmlFor="taxId">Tax ID</FormLabel>
+                            <FormControl>
+                              <Input id="taxId" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Contact Information */}
+                <Card>
+                  <CardHeader>
+                    <div className="text-lg font-semibold">Contact Information</div>
+                  </CardHeader>
+                  <CardContent className="p-6 pt-0">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <FormField
+                        name="email"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel htmlFor="email">Email</FormLabel>
+                            <FormControl>
+                              <Input id="email" type="email" placeholder="email@example.com" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        name="phone"
+                        render={({ field }) => (
+                          <FormItem>
+                            <FormLabel htmlFor="phone">Phone</FormLabel>
+                            <FormControl>
+                              <Input id="phone" type="tel" placeholder="+1 (555) 000-0000" {...field} />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+
+                      <FormField
+                        name="website"
+                        render={({ field }) => (
+                          <FormItem className="md:col-span-2">
+                            <FormLabel htmlFor="website">Website</FormLabel>
+                            <FormControl>
+                              <Input 
+                                id="website" 
+                                type="url" 
+                                placeholder="https://example.com" 
+                                {...field} 
+                              />
+                            </FormControl>
+                            <FormMessage />
+                          </FormItem>
+                        )}
+                      />
+                    </div>
+                  </CardContent>
+                </Card>
+
+                {/* Additional Information */}
+                <Card>
+                  <CardHeader>
+                    <div className="text-lg font-semibold">Additional Information</div>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="p-6 pt-0">
+                      <div className="space-y-4">
+                        <FormField
+                          name="description"
+                          render={({ field }) => (
+                            <FormItem>
+                              <FormLabel htmlFor="description">Description</FormLabel>
+                              <FormControl>
+                                <Textarea 
+                                  id="description" 
+                                  rows={3} 
+                                  placeholder="Enter account description"
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormMessage>{''}</FormMessage>
+                            </FormItem>
+                          )}
+                        />
+
+                        <FormField
+                          name="notes"
+                          render={({ field }) => (
+                            <FormItem className="mt-4">
+                              <FormLabel htmlFor="notes">Notes</FormLabel>
+                              <FormControl>
+                                <Textarea 
+                                  id="notes" 
+                                  rows={4} 
+                                  placeholder="Any additional notes"
+                                  {...field} 
+                                />
+                              </FormControl>
+                              <FormMessage>{''}</FormMessage>
+                            </FormItem>
+                          )}
+                        />
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+                
+                <div className="flex justify-end space-x-4 mt-6">
+                  <Button
+                    variant="outlined"
+                    onClick={() => navigate('/finance/accounts')}
+                    disabled={isSubmitting}
+                  >
+                    Cancel
+                  </Button>
+                  <Button type="submit" disabled={isSubmitting}>
+                    {isSubmitting ? 'Saving...' : 'Save Account'}
+                  </Button>
+                </div>
               </div>
-
-              <FormField
-                control={form.control}
-                name="iban"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>IBAN</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., GB29NWBK60161331926819" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="taxId"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Tax ID</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., 12-3456789" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-          </div>
-
-          {/* Contact Information */}
-          <div className="space-y-4">
-            <h3 className="text-lg font-medium">Contact Information</h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <FormField
-                control={form.control}
-                name="contactPerson"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Contact Person</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., John Doe" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="email"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Email</FormLabel>
-                    <FormControl>
-                      <Input type="email" placeholder="e.g., john@example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="phone"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Phone</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., +1 (555) 123-4567" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-
-              <FormField
-                control={form.control}
-                name="website"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Website</FormLabel>
-                    <FormControl>
-                      <Input placeholder="e.g., https://example.com" {...field} />
-                    </FormControl>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
-            </div>
-
-            <FormField
-              control={form.control}
-              name="billingAddress"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Billing Address</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Enter billing address"
-                      className="resize-none"
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-
-            <FormField
-              control={form.control}
-              name="notes"
-              render={({ field }) => (
-                <FormItem>
-                  <FormLabel>Notes</FormLabel>
-                  <FormControl>
-                    <Textarea
-                      placeholder="Any additional notes or comments"
-                      className="resize-none"
-                      rows={4}
-                      {...field}
-                    />
-                  </FormControl>
-                  <FormMessage />
-                </FormItem>
-              )}
-            />
-          </div>
-
-          <div className="flex justify-end space-x-4 pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => navigate('/finance/accounts')}
-              disabled={isSubmitting}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" disabled={isSubmitting}>
-              {isSubmitting ? (
-                <>
-                  <svg className="animate-spin -ml-1 mr-2 h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                  </svg>
-                  Saving...
-                </>
-              ) : (
-                <>
-                  <Save className="mr-2 h-4 w-4" />
-                  {isEditMode ? 'Update Account' : 'Create Account'}
-                </>
-              )}
-            </Button>
-          </div>
+            </CardContent>
+          </Card>
         </form>
-      </Form>
+      </FormProvider>
     </div>
   );
 };
+              
 
 export default AccountsForm;

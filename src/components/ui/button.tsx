@@ -1,7 +1,7 @@
 import React from 'react';
 import { Button as MuiButton } from '@mui/material';
 
-interface ButtonProps {
+interface ButtonProps extends React.ButtonHTMLAttributes<HTMLButtonElement> {
   children?: React.ReactNode;
   variant?: 'text' | 'outlined' | 'contained';
   color?: 'inherit' | 'primary' | 'secondary' | 'error' | 'info' | 'success' | 'warning';
@@ -12,6 +12,7 @@ interface ButtonProps {
   size?: 'small' | 'medium' | 'large';
   fullWidth?: boolean;
   sx?: any;
+  type?: 'button' | 'submit' | 'reset';
 }
 
 export const Button: React.FC<ButtonProps> = ({

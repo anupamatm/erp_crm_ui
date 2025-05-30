@@ -5,9 +5,45 @@ const api = API;
 
 export const financeService = {
   // Accounts
-  getAccounts: async (): Promise<Account[]> => {
-    const response = await api.get('/api/finance/accounts');
-    return response.data;
+  getAccounts: async (params: {
+    page?: number;
+    limit?: number;
+    search?: string;
+  } = {}): Promise<{ data: Account[]; total: number }> => {
+    try {
+      console.log('Fetching accounts with params:', params);
+      const response = await api.get('/api/finance/accounts', { params });
+      console.log('Raw API Response:', response);
+      
+      // The response might be in different formats, so we need to handle both:
+      // 1. Direct array response: { data: Account[] }
+      // 2. Paginated response: { data: { items: Account[], total: number } }
+      // 3. Direct array in data: { data: { data: Account[] } }
+      
+      let accounts: Account[] = [];
+      let total = 0;
+      
+      if (Array.isArray(response.data)) {
+        accounts = response.data;
+        total = response.data.length;
+      } else if (response.data?.items && Array.isArray(response.data.items)) {
+        accounts = response.data.items;
+        total = response.data.total || 0;
+      } else if (response.data?.data && Array.isArray(response.data.data)) {
+        accounts = response.data.data;
+        total = response.data.total || response.data.data.length;
+      } else if (response.data?.data && !Array.isArray(response.data.data)) {
+        // Handle case where data is not an array
+        console.error('Invalid accounts data format:', response.data);
+        throw new Error('Invalid accounts data format received from server');
+      }
+      
+      console.log('Processed accounts:', { accounts, total });
+      return { data: accounts, total };
+    } catch (error) {
+      console.error('Error in getAccounts:', error);
+      throw error;
+    }
   },
 
   getAccount: async (id: string): Promise<Account> => {
@@ -22,6 +58,19 @@ export const financeService = {
     description?: string;
     currency?: string;
     parentAccount?: string;
+    initialBalance?: number;
+    openingBalance?: number;
+    currentBalance?: number;
+    isActive?: boolean;
+    accountNumber?: string;
+    bankName?: string;
+    branch?: string;
+    ifscCode?: string;
+    swiftCode?: string;
+    taxId?: string;
+    notes?: string;
+    email?: string;
+    website?: string;
   }): Promise<Account> => {
     const response = await api.post('/api/finance/accounts', data);
     return response.data;
