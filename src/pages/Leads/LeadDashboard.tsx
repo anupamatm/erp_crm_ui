@@ -2,6 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import LeadService from '../../services/leadService';
 import { Lead } from '../../types/Lead';
+import Papa from 'papaparse';
+
 
 interface LeadStats {
   totalLeads: number;
@@ -30,6 +32,7 @@ const LeadDashboard = () => {
   const [stats, setStats] = useState<LeadStats | null>(null);
   const [recentLeads, setRecentLeads] = useState<Lead[]>([]);
   const [loading, setLoading] = useState(true);
+  const [csvError, setCsvError] = useState<string | null>(null);
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -49,6 +52,44 @@ const LeadDashboard = () => {
 
     fetchDashboardData();
   }, []);
+
+
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+  const file = e.target.files?.[0];
+  if (!file) return;
+
+  Papa.parse(file, {
+    header: true,
+    skipEmptyLines: true,
+    complete: async (results) => {
+      try {
+        const leads = results.data as Lead[];
+
+        // Optional: Validate each lead before sending
+        const validLeads = leads.filter(
+          (lead) => lead.firstName && lead.email // Add more rules as needed
+        );
+
+        if (validLeads.length === 0) {
+          setCsvError('No valid leads found in CSV.');
+          return;
+        }
+
+        // Call backend API to import
+        await LeadService.importLeads(validLeads);
+        alert('Leads imported successfully!');
+        window.location.reload(); // Refresh dashboard
+      } catch (err) {
+        console.error('Error importing CSV:', err);
+        setCsvError('Failed to import leads.');
+      }
+    },
+    error: (err) => {
+      console.error('CSV Parse Error:', err);
+      setCsvError('Invalid CSV format.');
+    }
+  });
+};
 
   if (loading) {
     return (
@@ -100,6 +141,33 @@ const LeadDashboard = () => {
           <p className="text-3xl font-bold text-red-600 mt-2">{stats?.statusCount?.lost || 0}</p>
         </div>
       </div>
+
+{/* Bulk Import CSV Section */}
+      <div className="mb-6 flex items-center justify-between">
+        <h2 className="text-xl font-semibold">Import Leads</h2>
+        <input
+          type="file"
+          accept=".csv"
+          onChange={handleFileUpload}
+          className="block text-sm text-gray-500 file:mr-4 file:py-2 file:px-4
+                     file:rounded-full file:border-0 file:text-sm file:font-semibold
+                     file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"
+        />
+      </div>
+      {csvError && <p className="text-red-600 mb-4">{csvError}</p>}
+
+      {/* {/* Sample CSV Download Link */}
+        <div className="mb-6">
+        <a 
+          href="/path/to/sample-template.csv" 
+          className="text-blue-600 hover:text-blue-800"
+          download
+        >
+          Download Sample CSV Template
+        </a>
+      </div> 
+
+
 
       <div className="bg-white rounded-lg shadow">
         <div className="flex justify-between items-center p-4 border-b">
