@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { format } from 'date-fns';
-import { API } from '../../lib/api';
+import {API} from '../../lib/api';
 import { useAuth } from '../../lib/auth';
 
 interface Invoice {

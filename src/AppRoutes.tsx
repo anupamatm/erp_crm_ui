@@ -1,7 +1,7 @@
 // src/AppRoutes.tsx
 import React, { useState } from 'react';
-import { Routes, Route, Navigate } from 'react-router-dom';
-import { ProtectedRoute } from './components/ProtectedRoute';
+import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import ProtectedRoute from './components/ProtectedRoute';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -18,7 +18,7 @@ import MyProfile from './pages/Customer/MyProfile';
 import MyOrders from './pages/Customer/MyOrders';
 import MyInvoices from './pages/Customer/MyInvoices';
 import PaymentHistory from './pages/Customer/PaymentHistory';
-import SalesDashboard from './pages/Sales/Dashboard';
+
 import Orders from './pages/Sales/Orders';
 import Opportunities from './pages/Sales/Opportunities';
 import Invoices from './pages/Sales/Invoices';
@@ -28,6 +28,14 @@ import SalesOrderForm from './pages/Sales/SalesOrderForm';
 import OpportunityForm from './pages/Sales/OpportunityForm';
 import SalesLayout from './pages/Sales/SalesLayout';
 import LeadsLayout from './pages/Leads/LeadsLayout';
+import FinanceLayout from './pages/Finance/FinanceLayout';
+import AccountsList from './pages/Finance/AccountsList';
+import AccountsForm from './pages/Finance/AccountsForm';
+import TransactionsList from './pages/Finance/TransactionsList';
+import TransactionForm from './pages/Finance/TransactionForm';
+import Summary from './pages/Finance/Summary';
+import FinanceReports from './pages/Finance/FinanceReports';
+
 
 import {
   Building2,
@@ -49,19 +57,30 @@ import { useParams } from 'react-router-dom';
 import OrderDetails from './pages/Sales/OrderDetails';
 import UserList from './pages/UserManagement/UserList';
 import UserForm from './pages/UserManagement/UserForm';
+import FinanceDashboard from './pages/Finance/FinanceDashboard';
+import Accounts from './pages/Finance/Accounts';
 
 const adminNavigation = [
-  { name: 'Dashboard', href: '/', icon: Building2, roles: ['admin'] },
+  { name: 'Dashboard', href: '/dashboard', icon: Building2, roles: ['admin'] },
   { name: 'Customers', href: '/customers', icon: User, roles: ['admin'] },
   { name: 'Products', href: '/products', icon: Box, roles: ['admin'] },
   { name: 'Sales', href: '/sales', icon: ShoppingCart, roles: ['admin'] },
-  { name: 'Leads', href: '/leads', icon: BarChart3, roles: ['admin', 'sales_manager', 'sales_exec'] },
-  { name: 'Settings', href: '/settings', icon: SettingsIcon, roles: ['admin'] },
+  { name: 'Leads', href: '/leads', icon: BarChart3, roles: ['sales_manager', 'sales_exec'] },
   { name: 'User Management', href: '/users', icon: Users, roles: ['admin'] },
-
+  { name: 'Finance', href: '/finance', icon: DollarSign, roles: ['admin', 'finance'] },
+  { name: 'Settings', href: '/settings', icon: SettingsIcon, roles: ['admin'] },
 
 ];
 
+// Finance navigation for finance users
+const financeNavigation = [
+  { name: 'Dashboard', href: '/finance', icon: DollarSign, roles: ['finance'] },
+  { name: 'Accounts', href: '/finance/accounts', icon: DollarSign, roles: ['finance'] },
+  { name: 'Transactions', href: '/finance/transactions', icon: DollarSign, roles: ['finance'] },
+  { name: 'Summary', href: '/finance/summary', icon: DollarSign, roles: ['finance'] },
+];
+
+// Customer navigation
 const customerNavigation = [
   { name: 'Dashboard', href: '/customer', icon: Building2, roles: ['customer'] },
   { name: 'Orders', href: '/customer/orders', icon: ShoppingCart, roles: ['customer'] },
@@ -83,7 +102,8 @@ export default function AppRoutes() {
       {/* Admin protected */}
       <Route element={<ProtectedRoute roles={['admin', 'sales_manager', 'sales_exec', 'inventory_mgr', 'support', 'hr', 'finance']} />}>
         <Route path="/" element={<Layout navigation={adminNavigation} />}>
-          <Route index element={<Dashboard />} />
+          <Route index element={<Navigate to="/dashboard" replace />} />
+          <Route path="dashboard" element={<Dashboard />} />
 
           <Route path="users">
             <Route index element={<UserList />} />
@@ -101,15 +121,7 @@ export default function AppRoutes() {
 
 
           <Route path="settings" element={<SettingsPage />} />
-          <Route path="leads" element={<LeadsLayout />}>
-            <Route index element={<LeadDashboard />} />
-            <Route path="new" element={<LeadForm />} />
-            <Route path=":id" element={<LeadDetail />} />
-            <Route path=":id/edit" element={
-              <LeadForm lead={useParams().id ? { _id: useParams().id } : undefined} />
-            } />
 
-          </Route>
         </Route>
       </Route>
 
@@ -123,10 +135,26 @@ export default function AppRoutes() {
           <Route path="profile" element={<MyProfile />} />
         </Route>
       </Route>
+      {/* Finance protected */}
+      <Route element={<ProtectedRoute roles={['admin', 'finance']} />}>
+        <Route path="/" element={<Layout navigation={adminNavigation} />}>
+          <Route path="finance" element={<FinanceLayout />}>
+            <Route index element={<FinanceDashboard />} />
+            <Route path="accounts" element={<AccountsList />} />
+            <Route path="accounts/new" element={<AccountsForm />} />
+            <Route path="transactions/" element={<TransactionsList />} />
+            <Route path="transactions/new" element={<TransactionForm />} />
+            <Route path="transactions/:id/edit" element={<TransactionForm />} />
+            <Route path="summary" element={<Summary />} />
+            <Route path="reports" element={<FinanceReports />} />
+          </Route>
+        </Route>
+      </Route>
 
       {/* sales protected */}
       <Route element={<ProtectedRoute roles={['admin', 'sales_manager', 'sales_exec']} />}>
         <Route path="/" element={<Layout navigation={adminNavigation} />}>
+          
           <Route path="sales" element={<SalesLayout />}>
             <Route index element={<Dashboard />} />
             <Route path="orders" element={<Orders />} />
@@ -137,6 +165,8 @@ export default function AppRoutes() {
             <Route path="invoices" element={<Invoices />} />
             <Route path="reports" element={<Reports />} />
           </Route>
+
+
           {/* Leads Module */}
           <Route path="leads" element={<LeadsLayout />}>
             <Route index element={<LeadDashboard />} />
