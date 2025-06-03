@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { Link } from 'react-router-dom';
 import { PlusCircle, Edit2, Trash2, Eye } from 'lucide-react';
 import { useAuth } from '../lib/auth';
@@ -11,6 +11,7 @@ interface Product {
   name: string;
   price: number;
   category: string;
+  stock: number;
   status: 'in_stock' | 'out_of_stock' | 'discontinued';
   createdBy: {
     id: string;
@@ -19,22 +20,28 @@ interface Product {
   };
 }
 
+const LOW_STOCK_THRESHOLD = 5;
+
 const Products = () => {
   const [products, setProducts] = useState<Product[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [page, setPage] = useState(1);
-  const [limit, setLimit] = useState(10);
+  const [limit] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
   const [totalItems, setTotalItems] = useState(0);
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedProductId, setSelectedProductId] = useState<string | null>(null);
+  const [categoryFilter, setCategoryFilter] = useState<string>('');
+  const [showLowStockOnly, setShowLowStockOnly] = useState(false);
   const { user } = useAuth();
 
-  const fetchProducts = async () => {
+  const fetchProducts = useCallback(async () => {
     try {
       setLoading(true);
-      const response = await API.get(`/api/products?page=${page}&limit=${limit}`);
+      const response = await API.get(
+        `/api/products?page=${page}&limit=${limit}&category=${categoryFilter}`
+      );
       setProducts(response.data.data);
       setTotalPages(response.data.pagination.totalPages);
       setTotalItems(response.data.pagination.totalItems);
@@ -43,11 +50,11 @@ const Products = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [page, limit, categoryFilter]);
 
   useEffect(() => {
     fetchProducts();
-  }, [page]);
+  }, [fetchProducts]);
 
   const handleDelete = async (id: string) => {
     if (!window.confirm('Are you sure you want to delete this product?')) return;
@@ -77,6 +84,10 @@ const Products = () => {
     }
   };
 
+  const filteredProducts = showLowStockOnly
+    ? products.filter((p) => p.stock < LOW_STOCK_THRESHOLD)
+    : products;
+
   if (loading) return <div className="flex justify-center p-8">Loading...</div>;
   if (error) return <div className="text-red-500 p-4">{error}</div>;
 
@@ -95,6 +106,44 @@ const Products = () => {
         )}
       </div>
 
+      {/* Category Filter and Low Stock Filter */}
+      <div className="mb-4 flex items-center space-x-6">
+        <div>
+          <label htmlFor="category" className="mr-2 text-sm font-medium">Category:</label>
+          <select
+            id="category"
+            value={categoryFilter}
+            onChange={(e) => setCategoryFilter(e.target.value)}
+            className="border px-4 py-2 rounded-md"
+          >
+            <option value="">All Categories</option>
+            <option value="Electronics">Electronics</option>
+            <option value="Furniture">Furniture</option>
+            <option value="dress">Dress</option>
+          </select>
+        </div>
+
+        <div className="flex items-center space-x-2">
+          <input
+            type="checkbox"
+            id="lowStockOnly"
+            checked={showLowStockOnly}
+            onChange={() => setShowLowStockOnly((prev) => !prev)}
+            className="form-checkbox"
+          />
+          <label htmlFor="lowStockOnly" className="text-sm font-medium text-gray-700">
+            Show Low Stock Only (below {LOW_STOCK_THRESHOLD})
+          </label>
+        </div>
+      </div>
+
+      {/* Low Stock Warning Banner */}
+      {filteredProducts.some((p) => p.stock < LOW_STOCK_THRESHOLD) && (
+        <div className="mb-4 p-4 bg-red-100 border border-red-300 text-red-800 rounded-md font-semibold">
+          ⚠️ Attention: Some products have low stock (less than {LOW_STOCK_THRESHOLD}). Please restock soon!
+        </div>
+      )}
+
       <div className="bg-white shadow-md rounded-lg overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
@@ -107,27 +156,22 @@ const Products = () => {
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {products.map((product) => (
-              <tr key={product._id}>
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                  {product.name}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {product.category}
-                </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  ₹{product.price.toFixed(2)}
-                </td>
+            {filteredProducts.map((product) => (
+              <tr
+                key={product._id}
+                className={product.stock < LOW_STOCK_THRESHOLD ? 'bg-red-50' : ''}
+                title={product.stock < LOW_STOCK_THRESHOLD ? 'Low Stock' : ''}
+              >
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{product.name}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{product.category}</td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">₹{product.price.toFixed(2)}</td>
                 <td className="px-6 py-4 whitespace-nowrap">
                   <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${getStatusColor(product.status)}`}>
                     {product.status}
                   </span>
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-3">
-                  <Link
-                    to={`/products/${product._id}`}
-                    className="text-indigo-600 hover:text-indigo-900 inline-flex items-center gap-1"
-                  >
+                  <Link to={`/products/${product._id}`} className="text-indigo-600 hover:text-indigo-900 inline-flex items-center gap-1">
                     <Eye size={16} /> View
                   </Link>
                   {['admin', 'product_manager'].includes(user?.role || '') && (
@@ -163,11 +207,9 @@ const Products = () => {
           >
             Previous
           </button>
-          
-          <span className="px-4 py-2">
-            Page {page} of {totalPages}
-          </span>
-          
+
+          <span className="px-4 py-2">Page {page} of {totalPages}</span>
+
           <button
             onClick={() => setPage((prev) => Math.min(totalPages, prev + 1))}
             disabled={page === totalPages}
@@ -180,16 +222,21 @@ const Products = () => {
 
       {/* Pagination Info */}
       <div className="mt-2 text-center text-sm text-gray-500">
-        Showing {products.length} of {totalItems} products
+        Showing {filteredProducts.length} of {totalItems} products
       </div>
 
       {/* Modal */}
       <Modal isOpen={isModalOpen} onClose={() => setIsModalOpen(false)}>
-        <ProductForm
-          onClose={() => setIsModalOpen(false)}
-          productId={selectedProductId}
-          onSuccess={fetchProducts}
-        />
+      <ProductForm
+        onClose={() => setIsModalOpen(false)}
+        productId={selectedProductId}
+        refreshProducts={fetchProducts}
+        onSuccess={() => {
+          setIsModalOpen(false); // close modal
+          fetchProducts();       // refresh product list after success
+        }}
+      />
+
       </Modal>
     </div>
   );

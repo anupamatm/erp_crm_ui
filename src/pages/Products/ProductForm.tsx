@@ -2,6 +2,15 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import ProductService from '../../services/productService';
 
+// Reusable category options (you could move this to a separate file)
+const categoryOptions = [
+  'Electronics',
+  'Furniture',
+  'Dress',
+  'Books',
+  'Groceries'
+];
+
 interface Product {
   _id?: string;
   name: string;
@@ -16,7 +25,7 @@ interface Product {
 
 interface ProductFormProps {
   isModal: boolean;
-  productId?: string;
+  productId?: string | null;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -33,7 +42,6 @@ const ProductForm: React.FC<ProductFormProps> = ({ isModal, productId, onClose, 
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
 
-  // Fetch product details if editing an existing product
   useEffect(() => {
     if (productId) {
       const fetchProduct = async () => {
@@ -52,32 +60,32 @@ const ProductForm: React.FC<ProductFormProps> = ({ isModal, productId, onClose, 
     }
   }, [productId]);
 
-  // Handle form submission
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError('');
-
+  
     try {
       setLoading(true);
       if (productId) {
-        // Edit product
         await ProductService.updateProduct(productId, product);
       } else {
-        // Add new product
         await ProductService.addProduct(product);
       }
-
-      onSuccess(); // Refresh the list after successful action
-      onClose(); // Close modal
+  
+      if (onSuccess) {
+        onSuccess(); // This will close modal and refresh products
+      }
+      // You don't need to call onClose() here because onSuccess already handles it.
+  
     } catch (err: any) {
       setError(err.message || 'Failed to save product');
     } finally {
       setLoading(false);
     }
   };
+  
 
-  // Handle form field changes
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
     setProduct(prev => ({
       ...prev,
@@ -90,7 +98,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ isModal, productId, onClose, 
       <h2 className="text-2xl font-bold mb-6">
         {productId ? 'Edit Product' : 'Add New Product'}
       </h2>
-      
+
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
@@ -142,14 +150,20 @@ const ProductForm: React.FC<ProductFormProps> = ({ isModal, productId, onClose, 
           <label className="block text-gray-700 text-sm font-bold mb-2">
             Category
           </label>
-          <input
-            type="text"
+          <select
             name="category"
             value={product.category}
             onChange={handleChange}
             className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             required
-          />
+          >
+            <option value="">Select a category</option>
+            {categoryOptions.map(cat => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>

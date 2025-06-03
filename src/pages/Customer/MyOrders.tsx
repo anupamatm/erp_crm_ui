@@ -29,7 +29,7 @@ export default function MyOrders() {
       try {
         setLoading(true);
         setError('');
-        const response = await API.get(`/api/customers/${user?._id}/orders`);
+        const response = await API.get(`/api/customers/${user?.id}/orders`);
         setOrders(response.data);
       } catch (err: any) {
         const errorMessage = err.response?.data?.error || 'Failed to fetch orders';
@@ -40,10 +40,10 @@ export default function MyOrders() {
       }
     };
 
-    if (user?._id) {
+    if (user?.id) {
       fetchOrders();
     }
-  }, [user?._id]);
+  }, [user?.id]);
 
   if (loading) {
     return <div className="flex justify-center items-center h-64">Loading...</div>;
