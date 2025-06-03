@@ -64,7 +64,7 @@ const adminNavigation = [
   { name: 'Customers', href: '/customers', icon: User, roles: ['admin'] },
   { name: 'Products', href: '/products', icon: Box, roles: ['admin'] },
   { name: 'Sales', href: '/sales', icon: ShoppingCart, roles: ['admin'] },
-  { name: 'Leads', href: '/leads', icon: BarChart3, roles: ['sales_manager', 'sales_exec'] },
+  { name: 'Leads', href: '/leads', icon: BarChart3, roles: ['admin','sales_manager', 'sales_exec'] },
   { name: 'User Management', href: '/users', icon: Users, roles: ['admin'] },
   { name: 'Finance', href: '/finance', icon: DollarSign, roles: ['admin', 'finance'] },
   { name: 'Settings', href: '/settings', icon: SettingsIcon, roles: ['admin'] },
