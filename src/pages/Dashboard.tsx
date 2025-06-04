@@ -35,7 +35,17 @@ const Dashboard = () => {
     { name: 'Government', value: 100 },
   ];
 
-  const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
+  // Blue theme colors matching the sidebar
+  const BLUE_THEME = {
+    primary: '#3B82F6',    // blue-500 (matches sidebar active state)
+    light: '#60A5FA',     // blue-400
+    dark: '#2563EB',      // blue-600
+    background: '#F8FAFF', // Very light blue background
+    text: '#1E40AF',      // blue-800
+    accent: '#1D4ED8'     // blue-700
+  };
+  
+  const COLORS = [BLUE_THEME.primary, BLUE_THEME.light, BLUE_THEME.dark, BLUE_THEME.accent];
     useEffect(() => {
     const fetchData = async () => {
       try {
@@ -55,10 +65,10 @@ const Dashboard = () => {
   }, []);
 
   const displayStats = dashboardData ? [
-    { name: 'Total Customers', value: dashboardData.totalCustomers?.toString() ?? 'N/A', icon: Users, iconBgClass: 'bg-blue-100', iconTextClass: 'text-blue-600' },
-    { name: 'Total Leads', value: dashboardData.totalLeads?.toString() ?? 'N/A', icon: Users, iconBgClass: 'bg-green-100', iconTextClass: 'text-green-600' }, // Using Users icon as placeholder for leads
-    { name: 'Products', value: dashboardData.totalProducts?.toString() ?? 'N/A', icon: ShoppingCart, iconBgClass: 'bg-yellow-100', iconTextClass: 'text-yellow-600' },
-    { name: 'Revenue', value: dashboardData.totalRevenue ? `$${dashboardData.totalRevenue.toLocaleString()}` : 'N/A', icon: DollarSign, iconBgClass: 'bg-purple-100', iconTextClass: 'text-purple-600' },
+    { name: 'Total Customers', value: dashboardData.totalCustomers?.toString() ?? 'N/A', icon: Users, iconBgClass: 'bg-blue-50', iconTextClass: 'text-blue-600' },
+    { name: 'Total Leads', value: dashboardData.totalLeads?.toString() ?? 'N/A', icon: Users, iconBgClass: 'bg-blue-50', iconTextClass: 'text-blue-600' },
+    { name: 'Products', value: dashboardData.totalProducts?.toString() ?? 'N/A', icon: ShoppingCart, iconBgClass: 'bg-blue-50', iconTextClass: 'text-blue-600' },
+    { name: 'Revenue', value: dashboardData.totalRevenue ? `$${dashboardData.totalRevenue.toLocaleString()}` : 'N/A', icon: DollarSign, iconBgClass: 'bg-blue-50', iconTextClass: 'text-blue-600' },
   ] : [];
 
   if (isLoading) {
@@ -128,12 +138,33 @@ const Dashboard = () => {
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <LineChart data={revenueData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis 
+                  dataKey="name" 
+                  tick={{ fill: '#4B5563' }}
+                  axisLine={{ stroke: '#D1D5DB' }}
+                />
+                <YAxis 
+                  tick={{ fill: '#4B5563' }}
+                  axisLine={{ stroke: '#D1D5DB' }}
+                />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: `1px solid ${BLUE_THEME.primary}`,
+                    borderRadius: '0.375rem',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                  }}
+                />
                 <Legend />
-                <Line type="monotone" dataKey="revenue" stroke="#3B82F6" strokeWidth={2} />
+                <Line 
+                  type="monotone" 
+                  dataKey="revenue" 
+                  stroke={BLUE_THEME.primary} 
+                  strokeWidth={2}
+                  dot={{ fill: BLUE_THEME.primary, strokeWidth: 2, r: 4 }}
+                  activeDot={{ r: 6, fill: BLUE_THEME.dark }}
+                />
               </LineChart>
             </ResponsiveContainer>
           </div>
@@ -148,11 +179,36 @@ const Dashboard = () => {
           <div className="h-80">
             <ResponsiveContainer width="100%" height="100%">
               <BarChart data={leadConversionData}>
-                <CartesianGrid strokeDasharray="3 3" />
-                <XAxis dataKey="name" />
-                <YAxis />
-                <Tooltip />
-                <Bar dataKey="value" fill="#10B981" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+                <XAxis 
+                  dataKey="name" 
+                  tick={{ fill: '#4B5563' }}
+                  axisLine={{ stroke: '#D1D5DB' }}
+                />
+                <YAxis 
+                  tick={{ fill: '#4B5563' }}
+                  axisLine={{ stroke: '#D1D5DB' }}
+                />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: `1px solid ${BLUE_THEME.primary}`,
+                    borderRadius: '0.375rem',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                  }}
+                />
+                <Bar 
+                  dataKey="value" 
+                  fill={BLUE_THEME.primary}
+                  radius={[4, 4, 0, 0]}
+                >
+                  {leadConversionData.map((entry, index) => (
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={COLORS[index % COLORS.length]}
+                    />
+                  ))}
+                </Bar>
               </BarChart>
             </ResponsiveContainer>
           </div>
@@ -173,16 +229,36 @@ const Dashboard = () => {
                   cy="50%"
                   labelLine={false}
                   outerRadius={80}
-                  fill="#8884d8"
+                  fill={BLUE_THEME.primary}
                   dataKey="value"
                   label={({ name, percent }) => `${name}: ${(percent * 100).toFixed(0)}%`}
                 >
                   {customerDistributionData.map((entry, index) => (
-                    <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                    <Cell 
+                      key={`cell-${index}`} 
+                      fill={COLORS[index % COLORS.length]}
+                      stroke="#ffffff"
+                      strokeWidth={1}
+                    />
                   ))}
                 </Pie>
-                <Tooltip />
-                <Legend />
+                <Tooltip 
+                  contentStyle={{
+                    backgroundColor: 'white',
+                    border: `1px solid ${BLUE_THEME.primary}`,
+                    borderRadius: '0.375rem',
+                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
+                  }}
+                />
+                <Legend 
+                  layout="horizontal"
+                  verticalAlign="bottom"
+                  align="center"
+                  wrapperStyle={{
+                    paddingTop: '20px',
+                    fontSize: '14px'
+                  }}
+                />
               </RechartsPieChart>
             </ResponsiveContainer>
           </div>
