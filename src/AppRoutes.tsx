@@ -69,7 +69,7 @@ const adminNavigation = [
   { name: 'User Management', href: '/users', icon: Users, roles: ['admin'] },
   { name: 'Finance', href: '/finance', icon: DollarSign, roles: ['admin', 'finance'] },
   { name: 'Settings', href: '/settings', icon: SettingsIcon, roles: ['admin'] },
-
+  
 ];
 
 // Finance navigation for finance users
