@@ -209,7 +209,7 @@ const AccountsList = () => {
       case 'Expense':
         return <Badge className="bg-yellow-100 text-yellow-800">Expense</Badge>;
       default:
-        return <Badge variant="outlined">{type}</Badge>;
+        return <Badge variant="outline">{type}</Badge>;
     }
   };
 

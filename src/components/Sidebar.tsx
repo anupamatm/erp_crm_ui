@@ -17,7 +17,7 @@ const Sidebar: React.FC<{ navigation: NavigationItem[] }> = ({ navigation }) => 
   };
 
   return (
-    <nav className="w-64 bg-gray-800 text-white relative">
+    <nav className="w-64 bg-gray-800 text-white sticky top-0 h-screen">
       <div className="p-4">
         <h1 className="text-xl font-bold text-white">ERP CRM</h1>
       </div>

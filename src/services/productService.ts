@@ -12,11 +12,59 @@ interface Product {
 
 class ProductService {
   // Fetch products with pagination
-  static async getProducts(page: number = 1) {
+  static async getProducts(page: number = 1, limit: number = 10) {
     try {
-      const response = await API.get(`/api/products?page=${page}`);
-      return response.data; // Assuming response contains the products and pagination info
+      const response = await API.get(`/api/products?page=${page}&limit=${limit}`);
+      console.log('Products API Response (raw):', response);
+      
+      // Handle different API response structures
+      if (!response.data) {
+        console.error('No data in response:', response);
+        return { products: [], total: 0, totalCount: 0 };
+      }
+      
+      // If response.data is an array, it's likely the direct products array
+      if (Array.isArray(response.data)) {
+        return {
+          products: response.data,
+          total: response.data.length,
+          totalCount: response.data.length
+        };
+      }
+      
+      // If response.data has a data property (common in paginated responses)
+      if (response.data.data && Array.isArray(response.data.data)) {
+        return {
+          products: response.data.data,
+          total: response.data.total || response.data.data.length,
+          totalCount: response.data.totalCount || response.data.data.length
+        };
+      }
+      
+      // If response.data is an object with products array
+      if (response.data.products && Array.isArray(response.data.products)) {
+        return {
+          products: response.data.products,
+          total: response.data.total || response.data.products.length,
+          totalCount: response.data.totalCount || response.data.products.length
+        };
+      }
+      
+      // Default return if structure doesn't match expected formats
+      console.warn('Unexpected API response structure:', response.data);
+      return { products: [], total: 0, totalCount: 0 };
+      
     } catch (error: any) {
+      console.error('Error in getProducts:', error);
+      if (error.response) {
+        console.error('Error response data:', error.response.data);
+        console.error('Error response status:', error.response.status);
+        console.error('Error response headers:', error.response.headers);
+      } else if (error.request) {
+        console.error('No response received:', error.request);
+      } else {
+        console.error('Error:', error.message);
+      }
       throw new Error(error.response?.data?.message || 'Error fetching products');
     }
   }
