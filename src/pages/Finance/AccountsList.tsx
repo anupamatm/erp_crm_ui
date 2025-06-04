@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Search, Plus, Download, Filter, ChevronDown, ChevronUp, X } from 'lucide-react';
+import { Search, Plus, Download, X, Loader2, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight } from 'lucide-react';
 import { Button } from '../../components/ui/button';
 import { Input } from '../../components/ui/input';
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '../../components/ui/table';
@@ -8,6 +8,25 @@ import { Badge } from '../../components/ui/badge';
 import { formatCurrency } from '../../lib/utils';
 import { financeService } from '../../services/financeService';
 import { useToast } from '../../components/ui/use-toast';
+import { Skeleton } from '../../components/ui/skeleton';
+// Custom debounce implementation with cancel method
+const debounce = <F extends (...args: any[]) => any>(func: F, wait: number) => {
+  let timeout: NodeJS.Timeout | null = null;
+  
+  const debounced = (...args: Parameters<F>) => {
+    if (timeout) clearTimeout(timeout);
+    timeout = setTimeout(() => func(...args), wait);
+  };
+  
+  debounced.cancel = () => {
+    if (timeout) {
+      clearTimeout(timeout);
+      timeout = null;
+    }
+  };
+  
+  return debounced;
+};
 
 interface Account {
   _id: string;
@@ -28,12 +47,34 @@ const AccountsList = () => {
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [searchInput, setSearchInput] = useState('');
   const [selectedRows, setSelectedRows] = useState<string[]>([]);
   const [selectAll, setSelectAll] = useState(false);
   const [currentPage, setCurrentPage] = useState(1);
+  const [pageSize] = useState(10);
   const [totalPages, setTotalPages] = useState(1);
-  const pageSize = 10;
+  const [totalItems, setTotalItems] = useState(0);
 
+  // Debounced fetch function
+  const debouncedFetch = useCallback(
+    debounce((search: string) => {
+      setSearchTerm(search);
+      setCurrentPage(1); // Reset to first page on new search
+    }, 500),
+    []
+  );
+
+  // Update search term when input changes (debounced)
+  useEffect(() => {
+    debouncedFetch(searchInput);
+    
+    // Cleanup function to cancel any pending debounced calls
+    return () => {
+      debouncedFetch.cancel();
+    };
+  }, [searchInput, debouncedFetch]);
+
+  // Fetch accounts when pagination or search term changes
   useEffect(() => {
     fetchAccounts();
   }, [currentPage, searchTerm]);
@@ -46,16 +87,32 @@ const AccountsList = () => {
         limit: pageSize,
         search: searchTerm,
       });
-      console.log('API *********:', response);
-      setAccounts(response.data || []);
-      setTotalPages(Math.ceil(response.total || 0 / pageSize));
+      
+      const { data, total } = response;
+      console.log('API Response:', { data, total, currentPage, totalPages: Math.ceil(total / pageSize) });
+      
+      setAccounts(Array.isArray(data) ? data : []);
+      
+      // Update pagination state
+      const totalCount = typeof total === 'number' ? total : 0;
+      const calculatedPages = Math.ceil(totalCount / pageSize) || 1;
+      
+      setTotalItems(totalCount);
+      setTotalPages(calculatedPages);
+      
+      // If current page is greater than total pages, reset to first page
+      if (currentPage > calculatedPages && calculatedPages > 0) {
+        setCurrentPage(1);
+        return; // Will trigger another fetch with page=1
+      }
+      
     } catch (error) {
       console.error('Error fetching accounts:', error);
       setAccounts([]);
       setTotalPages(1);
       toast({
         title: 'Error',
-        description: 'Failed to load accounts',
+        description: error instanceof Error ? error.message : 'Failed to load accounts',
         variant: 'destructive',
       });
     } finally {
@@ -63,10 +120,22 @@ const AccountsList = () => {
     }
   };
 
-  const handleSearch = (e: React.FormEvent) => {
+  const handleSearch = useCallback((e: React.FormEvent) => {
     e.preventDefault();
+    setSearchTerm(searchInput);
     setCurrentPage(1);
-    fetchAccounts();
+  }, [searchInput]);
+
+  const handleSearchInputChange = useCallback((e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setSearchInput(value);
+    // debouncedFetch is called in the effect that watches searchInput
+  }, []);
+
+  const handleClearSearch = () => {
+    setSearchInput('');
+    setSearchTerm('');
+    setCurrentPage(1);
   };
 
   const handleDelete = async (id: string) => {
@@ -140,12 +209,32 @@ const AccountsList = () => {
       case 'Expense':
         return <Badge className="bg-yellow-100 text-yellow-800">Expense</Badge>;
       default:
-        return <Badge variant="outline">{type}</Badge>;
+        return <Badge variant="outlined">{type}</Badge>;
     }
   };
 
+  // Generate page numbers for pagination
+  const getPageNumbers = () => {
+    const pages = [];
+    const maxVisiblePages = 5;
+    let startPage = Math.max(1, currentPage - Math.floor(maxVisiblePages / 2));
+    let endPage = Math.min(totalPages, startPage + maxVisiblePages - 1);
+    
+    if (endPage - startPage + 1 < maxVisiblePages) {
+      startPage = Math.max(1, endPage - maxVisiblePages + 1);
+    }
+    
+    for (let i = startPage; i <= endPage; i++) {
+      pages.push(i);
+    }
+    
+    return pages;
+  };
+
+  const pageNumbers = getPageNumbers();
+
   return (
-    <div className="space-y-6">
+    <div className="space-y-6 p-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center space-y-4 sm:space-y-0">
         <div>
           <h2 className="text-2xl font-bold">Accounts</h2>
@@ -161,25 +250,64 @@ const AccountsList = () => {
 
       {/* Search and Filter Bar */}
       <div className="space-y-4">
-        <form onSubmit={handleSearch} className="flex space-x-2">
+        <div className="flex flex-col sm:flex-row gap-4 mb-6">
           <div className="relative flex-1">
             <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
             <Input
-              type="search"
+              type="text"
               placeholder="Search accounts..."
-              className="pl-8"
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
+              value={searchInput}
+              onChange={handleSearchInputChange}
+              onKeyDown={(e: React.KeyboardEvent) => {
+                if (e.key === 'Enter') {
+                  handleSearch(e as any);
+                }
+              }}
+              style={{
+                paddingLeft: '2rem',
+                width: '100%',
+                maxWidth: '400px'
+              }}
             />
+            {searchInput && (
+              <X
+                className="absolute right-2.5 top-2.5 h-4 w-4 text-muted-foreground cursor-pointer"
+                onClick={handleClearSearch}
+              />
+            )}
           </div>
-          <Button type="submit" variant="outline">
-            Search
+          <Button 
+            type="button" 
+            variant="outlined"
+            onClick={handleSearch}
+            disabled={loading}
+          >
+            {loading ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Searching...
+              </>
+            ) : (
+              'Search'
+            )}
+          </Button>
+          <Button 
+            type="button" 
+            variant="outlined"
+            onClick={() => {
+              setSearchInput('');
+              setSearchTerm('');
+              setCurrentPage(1);
+            }}
+            disabled={!searchTerm && !searchInput}
+          >
+            Reset
           </Button>
           <Button type="button" variant="outline">
             <Download className="mr-2 h-4 w-4" />
             Export
           </Button>
-        </form>
+        </div>
       </div>
 
       {/* Bulk Actions */}
@@ -190,9 +318,9 @@ const AccountsList = () => {
           </div>
           <div className="space-x-2">
             <Button
-              variant="outline"
+              variant="destructive"
               size="sm"
-              className="border-red-300 text-red-600 hover:bg-red-50 hover:text-red-700"
+              className="hover:bg-red-100"
               onClick={handleBulkDelete}
             >
               Delete Selected
@@ -274,15 +402,15 @@ const AccountsList = () => {
                   <TableCell>
                     <div className="flex space-x-2">
                       <Button
-                        variant="ghost"
-                        size="sm"
+                        variant="text"
+                        size="small"
                         onClick={() => navigate(`/finance/accounts/${account._id}/edit`)}
                       >
                         Edit
                       </Button>
                       <Button
-                        variant="ghost"
-                        size="sm"
+                        variant="text"
+                        size="small"
                         className="text-red-600 hover:text-red-700"
                         onClick={() => handleDelete(account._id)}
                       >
@@ -298,28 +426,79 @@ const AccountsList = () => {
       </div>
 
       {/* Pagination */}
-      {totalPages > 1 && (
-        <div className="flex items-center justify-between">
+      {accounts.length > 0 && (
+        <div className="flex items-center justify-between px-6 py-4 border-t">
           <div className="text-sm text-muted-foreground">
-            Page {currentPage} of {totalPages}
+            Showing <span className="font-medium">{(currentPage - 1) * pageSize + 1}</span> to{' '}
+            <span className="font-medium">
+              {Math.min(currentPage * pageSize, totalItems)}
+            </span>{' '}
+            of <span className="font-medium">{totalItems}</span> accounts
           </div>
-          <div className="flex space-x-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
-              disabled={currentPage === 1}
-            >
-              Previous
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
-              disabled={currentPage === totalPages}
-            >
-              Next
-            </Button>
+          <div className="flex items-center space-x-2">
+            <div className="flex items-center space-x-1">
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => setCurrentPage(1)}
+                disabled={currentPage === 1 || loading}
+              >
+                <ChevronsLeft className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1 || loading}
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </Button>
+              {pageNumbers.map((pageNum) => (
+                <Button
+                  key={pageNum}
+                  variant={currentPage === pageNum ? "contained" : "outlined"}
+                  size="small"
+                  onClick={() => setCurrentPage(pageNum)}
+                  disabled={loading}
+                >
+                  {pageNum}
+                </Button>
+              ))}
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage >= totalPages || loading}
+              >
+                <ChevronRight className="h-4 w-4" />
+              </Button>
+              <Button
+                variant="outlined"
+                size="small"
+                onClick={() => setCurrentPage(totalPages)}
+                disabled={currentPage >= totalPages || loading}
+              >
+                <ChevronsRight className="h-4 w-4" />
+              </Button>
+            </div>
+            <div className="flex items-center space-x-2 ml-4">
+              <span className="text-sm text-muted-foreground">Rows:</span>
+              <select
+                value={pageSize}
+                disabled={loading}
+                onChange={() => {
+                  setCurrentPage(1);
+                  // If you want to make pageSize dynamic, you can add state for it
+                  // setPageSize(Number(e.target.value));
+                }}
+              >
+                {[10, 20, 30, 40, 50].map((size) => (
+                  <option key={size} value={size}>
+                    {size}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
       )}
