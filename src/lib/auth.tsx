@@ -11,6 +11,7 @@ interface User {
 interface AuthContextType {
   user: User | null;
   loading: boolean;
+  initialLoad: boolean;
   error: string | null;
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
@@ -32,6 +33,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [initialLoad, setInitialLoad] = useState(true);
 
   // Check if token is valid and refresh if needed
   const checkToken = async () => {
@@ -75,19 +77,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setLoading(true);
         const isValid = await checkToken();
         if (!isValid) {
-          // Try to sign in with stored credentials if available
-          const storedEmail = localStorage.getItem('email');
-          const storedPassword = localStorage.getItem('password');
-          if (storedEmail && storedPassword) {
-            try {
-              await signIn(storedEmail, storedPassword);
-            } catch (err) {
-              console.error('Stored credentials failed:', err);
-            }
-          }
+          // Clear user state but don't redirect immediately
+          setUser(null);
+          setError('Authentication required');
         }
+      } catch (error) {
+        console.error('Auth check failed:', error);
+        setUser(null);
+        setError('Authentication check failed');
       } finally {
         setLoading(false);
+        setInitialLoad(false);
       }
     };
 
@@ -98,17 +98,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       setLoading(true);
       const response = await API.post('/api/auth/signin', { email, password });
-      
       if (!response.data?.token || !response.data?.user) {
         throw new Error('Invalid login response');
       }
-
-      const token = response.data.token;
-      localStorage.setItem('token', token);
-      localStorage.setItem('email', email); // Store email for auto-login
-      localStorage.setItem('password', password); // Store password for auto-login
-      
+      localStorage.setItem('token', response.data.token);
+      API.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
       setUser(response.data.user);
+      setInitialLoad(false);
       setError(null);
 
       if (!response.data.user.id || !response.data.user.role) {
@@ -174,18 +170,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider
-      value={{
-        user,
-        loading,
-        error,
-        signIn,
-        signUp,
-        signOut,
-        refresh
-      }}
-    >
-      {children}
+    <AuthContext.Provider value={{ user, loading, initialLoad, error, signIn, signUp, signOut, refresh }}>
+      {initialLoad ? (
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900"></div>
+        </div>
+      ) : (
+        children
+      )}
     </AuthContext.Provider>
   );
+  
 }
