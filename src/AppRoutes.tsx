@@ -2,6 +2,8 @@
 import React, { useState } from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
 import ProtectedRoute from './components/ProtectedRoute';
+import ProtectedRouteLayout from './components/ProtectedRouteLayout';
+import RedirectByRole from './components/RedirectByRole';
 import Layout from './components/Layout';
 import Login from './pages/Login';
 import Signup from './pages/Signup';
@@ -69,7 +71,7 @@ const adminNavigation = [
   { name: 'User Management', href: '/users', icon: Users, roles: ['admin'] },
   { name: 'Finance', href: '/finance', icon: DollarSign, roles: ['admin', 'finance'] },
   { name: 'Settings', href: '/settings', icon: SettingsIcon, roles: ['admin'] },
-  
+
 ];
 
 // Finance navigation for finance users
@@ -94,99 +96,103 @@ export default function AppRoutes() {
 
   return (
     <Routes>
-      {/* Public */}
+      {/* Public Routes */}
       <Route path="/login" element={<Login />} />
       <Route path="/signup" element={<Signup />} />
       <Route path="/unauthorized" element={<Unauthorized />} />
 
-      {/* Admin protected */}
-      <Route element={<ProtectedRoute roles={['admin', 'sales_manager', 'sales_exec', 'inventory_mgr', 'support', 'hr', 'finance']} />}>
-        <Route path="/" element={<Layout navigation={adminNavigation} />}>
-          <Route index element={<Navigate to="/dashboard" replace />} />
+      {/* Protected Routes */}
+      <Route element={<ProtectedRoute roles={['admin', 'finance', 'sales_manager', 'sales_exec', 'customer']} />}>
+        <Route path="/" element={<ProtectedRouteLayout />}>
+          {/* Redirect to role-specific dashboard */}
+          <Route index element={<RedirectByRole />} />
+          
+          {/* Admin Routes */}
           <Route path="dashboard" element={<Dashboard />} />
-
+          
           <Route path="users">
             <Route index element={<UserList />} />
             <Route path="new" element={<UserForm />} />
           </Route>
-
-          <Route path="customers" element={<Customers />} />
-          <Route path="customers/new" element={<CustomerForm />} />
-          <Route path="customers/:id" element={<CustomerView />} />
-          <Route path="customers/:id/edit" element={<CustomerForm />} />
-
-          <Route path="products" element={<Products />} />
-          <Route path="products/new" element={<ProductForm />} />
-          <Route path="products/:id/edit" element={<ProductForm />} />
-
-
+          
           <Route path="settings" element={<SettingsPage />} />
+          
+          <Route path="customers">
+            <Route index element={<Customers />} />
+            <Route path="new" element={<CustomerForm />} />
+            <Route path=":id" element={<CustomerView />} />
+            <Route path=":id/edit" element={<CustomerForm />} />
+          </Route>
+          
+          <Route path="products">
+            <Route index element={<Products />} />
+            <Route path="new" element={<ProductForm />} />
+            <Route path=":id/edit" element={<ProductForm />} />
+          </Route>
 
-        </Route>
-      </Route>
-
-      {/* Customer protected */}
-      <Route element={<ProtectedRoute roles={['customer']} />}>
-        <Route path="/customer" element={<Layout navigation={customerNavigation} />}>
-          <Route index element={<CustomerDashboard />} />
-          <Route path="orders" element={<MyOrders />} />
-          <Route path="invoices" element={<MyInvoices />} />
-          <Route path="payments" element={<PaymentHistory />} />
-          <Route path="profile" element={<MyProfile />} />
-        </Route>
-      </Route>
-      {/* Finance protected */}
-      <Route element={<ProtectedRoute roles={['admin', 'finance']} />}>
-        <Route path="/" element={<Layout navigation={adminNavigation} />}>
-          <Route path="finance" element={<FinanceLayout />}>
+          {/* Finance Routes */}
+          <Route path="finance">
             <Route index element={<FinanceDashboard />} />
-            <Route path="accounts" element={<AccountsList />} />
-            <Route path="accounts/new" element={<AccountsForm />} />
-            <Route path="transactions/" element={<TransactionsList />} />
-            <Route path="transactions/new" element={<TransactionForm />} />
-            <Route path="transactions/:id/edit" element={<TransactionForm />} />
+            <Route path="accounts">
+              <Route index element={<AccountsList />} />
+              <Route path="new" element={<AccountsForm />} />
+              <Route path=":id/edit" element={<AccountsForm />} />
+            </Route>
+            <Route path="transactions">
+              <Route index element={<TransactionsList />} />
+              <Route path="new" element={<TransactionForm />} />
+              <Route path=":id/edit" element={<TransactionForm />} />
+            </Route>
             <Route path="summary" element={<Summary />} />
             <Route path="reports" element={<FinanceReports />} />
           </Route>
-        </Route>
-      </Route>
 
-      {/* sales protected */}
-      <Route element={<ProtectedRoute roles={['admin', 'sales_manager', 'sales_exec']} />}>
-        <Route path="/" element={<Layout navigation={adminNavigation} />}>
-          
-          <Route path="sales" element={<SalesLayout />}>
+          {/* Sales Routes */}
+          <Route path="sales">
             <Route index element={<Dashboard />} />
-            <Route path="orders" element={<Orders />} />
-            <Route path="opportunities" element={<Opportunities />} />
-            <Route path="opportunities/new" element={<OpportunityForm />} />
-            <Route path="opportunities/:id/edit" element={<OpportunityForm />} />
-            <Route path="/sales/orders/:id" element={<OrderDetails />} />
+            <Route path="orders">
+              <Route index element={<Orders />} />
+              <Route path="new" element={<SalesOrderForm isOpen={true} onClose={() => window.history.back()} />} />
+              <Route path=":id" element={<OrderDetails />} />
+              <Route path=":id/edit" element={<SalesOrderForm isOpen={true} onClose={() => window.history.back()} />} />
+            </Route>
+            <Route path="opportunities">
+              <Route index element={<Opportunities />} />
+              <Route path="new" element={<OpportunityForm />} />
+              <Route path=":id" element={<OpportunityForm />} />
+            </Route>
             <Route path="invoices" element={<Invoices />} />
             <Route path="reports" element={<Reports />} />
           </Route>
 
-
-          {/* Leads Module */}
-          <Route path="leads" element={<LeadsLayout />}>
-            <Route index element={<LeadDashboard />} />
-            <Route path="sources" element={<LeadSources />} />
-            <Route path="status" element={<LeadStatus />} />
-            <Route path="assign" element={<AssignLead />} />
-            <Route path="new" element={<LeadForm />} />
-            <Route path=":id" element={<LeadDetail />} />
-            <Route path=":id/edit" element={
-              <LeadForm lead={useParams().id ? { _id: useParams().id } : undefined} />
-            } />
+          {/* Leads Routes */}
+          <Route path="leads">
+            <Route element={<LeadsLayout />}>
+              <Route index element={<LeadDashboard />} />
+              <Route path="sources" element={<LeadSources />} />
+              <Route path="status" element={<LeadStatus />} />
+              <Route path="assign" element={<AssignLead />} />
+              <Route path="new" element={<LeadForm />} />
+              <Route path=":id" element={<LeadDetail />} />
+              <Route path=":id/edit" element={<LeadForm />} />
+            </Route>
           </Route>
 
-        </Route>
+          {/* Customer Routes */}
+          <Route path="customer">
+            <Route index element={<CustomerDashboard />} />
+            <Route path="orders" element={<MyOrders />} />
+            <Route path="invoices" element={<MyInvoices />} />
+            <Route path="payments" element={<PaymentHistory />} />
+            <Route path="profile" element={<MyProfile />} />
+          </Route>
 
+          {/* Fallback route */}
+          <Route path="*" element={<Navigate to="/" replace />} />
+        </Route>
       </Route>
 
-
-
-      {/* Fallback */}
+      {/* Fallback to login for any unmatched route */}
       <Route path="*" element={<Navigate to="/login" replace />} />
     </Routes>
   );

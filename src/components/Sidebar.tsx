@@ -24,7 +24,7 @@ const Sidebar: React.FC<{ navigation: NavigationItem[] }> = ({ navigation }) => 
 
       <div className="space-y-1 px-2 py-4">
         {navigation
-          .filter(item => item.roles.includes(user?.role || ''))
+          .filter(item => (item.roles || []).includes(user?.role || ''))
           .map((item) => {
             // Handle customer navigation paths
             const fullPath = user?.role === 'customer' 

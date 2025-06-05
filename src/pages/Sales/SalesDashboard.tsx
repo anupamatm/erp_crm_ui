@@ -94,7 +94,24 @@ const Dashboard = () => {
         params: { days: dateRange }
       });
       console.log('Dashboard response:', response.data);
-      setData(response.data);
+      
+      // Transform the response to match the expected DashboardData interface
+      const dashboardData = {
+        summary: {
+          totalRevenue: response.data.revenue || 0,
+          totalOrders: response.data.orders || 0,
+          averageOrderValue: response.data.averageOrderValue || 0,
+          pendingOrders: response.data.pendingOrders || 0,
+          activeOpportunities: response.data.activeOpportunities || 0,
+          conversionRate: response.data.conversionRate || 0
+        },
+        // Add mock data for other required fields
+        revenueByMonth: [],
+        opportunitiesByStage: [],
+        topProducts: []
+      };
+      
+      setData(dashboardData);
     } catch (err: any) {
       console.error('Dashboard Error:', err);
       const errorMessage = err.response?.data?.error || 
