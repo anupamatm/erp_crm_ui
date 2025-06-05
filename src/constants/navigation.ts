@@ -52,21 +52,24 @@ export const adminNavigation: NavigationItem[] = [
 
 // Finance Navigation
 export const financeNavigation: NavigationItem[] = [
-  createNavItem('Dashboard', '/finance', LayoutDashboard, [ROLES.FINANCE]),
-  createNavItem('Accounts', '/finance/accounts', Wallet, [ROLES.FINANCE]),
-  createNavItem('Transactions', '/finance/transactions', CreditCard, [ROLES.FINANCE]),
-  createNavItem('Summary', '/finance/summary', BarChart2, [ROLES.FINANCE]),
-  createNavItem('Reports', '/finance/reports', FileBarChart2, [ROLES.FINANCE]),
+  createNavItem('Dashboard', '/finance', LayoutDashboard, [ROLES.ADMIN, ROLES.FINANCE]),
+  createNavItem('Accounts', '/finance/accounts', Wallet, [ROLES.ADMIN, ROLES.FINANCE]),
+  createNavItem('Transactions', '/finance/transactions', CreditCard, [ROLES.ADMIN, ROLES.FINANCE]),
+  createNavItem('Summary', '/finance/summary', BarChart2, [ROLES.ADMIN, ROLES.FINANCE]),
+  createNavItem('Reports', '/finance/reports', FileBarChart2, [ROLES.ADMIN, ROLES.FINANCE]),
+  
 ];
 
 // Sales Navigation
 export const salesNavigation: NavigationItem[] = [
   createNavItem('Dashboard', '/sales', LayoutDashboard, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
-  createNavItem('Orders', '/sales/orders', ShoppingCart, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
-  createNavItem('Opportunities', '/sales/opportunities', TrendingUp, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
-  createNavItem('Invoices', '/sales/invoices', FileText, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
-  createNavItem('Reports', '/sales/reports', BarChart, [ROLES.SALES_MANAGER]),
+//   createNavItem('Orders', '/sales/orders', ShoppingCart, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
+//   createNavItem('Opportunities', '/sales/opportunities', TrendingUp, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
+//   createNavItem('Invoices', '/sales/invoices', FileText, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
+//   createNavItem('Reports', '/sales/reports', BarChart, [ROLES.SALES_MANAGER]),
   createNavItem('Leads', '/leads', ClipboardList, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
+  createNavItem('Customers', '/customers', User, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
+  createNavItem('Products', '/products', Package, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
 ];
 
 // Customer Navigation
@@ -80,7 +83,7 @@ export const customerNavigation: NavigationItem[] = [
 
 // Navigation map for ProtectedRouteLayout
 const navigationMap: Record<string, NavigationItem[]> = {
-  [ROLES.ADMIN]: adminNavigation,
+  [ROLES.ADMIN]: adminNavigation, // Admin sees both admin and finance nav
   [ROLES.FINANCE]: financeNavigation,
   [ROLES.SALES_MANAGER]: salesNavigation,
   [ROLES.SALES_EXEC]: salesNavigation,
@@ -88,5 +91,6 @@ const navigationMap: Record<string, NavigationItem[]> = {
 };
 
 export const getNavigationForRole = (role: string): NavigationItem[] => {
+  // Return the combined navigation for the role
   return navigationMap[role] || [];
 };

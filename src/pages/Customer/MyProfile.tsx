@@ -27,9 +27,10 @@ export default function MyProfile() {
   });
 
   useEffect(() => {
+    console.log("user*********",user);
     const fetchProfile = async () => {
       try {
-        const response = await API.get(`/api/customers/${user?._id}/profile`);
+        const response = await API.get(`/api/customers/${user?.id}`);
         setProfileData(response.data);
       } catch (err) {
         setError('Failed to fetch profile data');
@@ -39,10 +40,10 @@ export default function MyProfile() {
       }
     };
 
-    if (user?._id) {
+    if (user?.id) {
       fetchProfile();
     }
-  }, [user?._id]);
+  }, [user?.id]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -58,7 +59,7 @@ export default function MyProfile() {
     setSuccess('');
     
     try {
-      await API.put(`/api/customers/${user?._id}/profile`, profileData);
+      await API.put(`/api/customers/${user?.id}/profile`, profileData);
       setSuccess('Profile updated successfully');
       setIsEditing(false);
     } catch (err) {

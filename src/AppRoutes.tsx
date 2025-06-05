@@ -1,7 +1,9 @@
 // src/AppRoutes.tsx
 import React, { useState } from 'react';
 import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { ROLES } from './constants/navigation';
 import ProtectedRoute from './components/ProtectedRoute';
+import CustomerLayout from './pages/Customer/CustomerLayout';
 import ProtectedRouteLayout from './components/ProtectedRouteLayout';
 import RedirectByRole from './components/RedirectByRole';
 import Layout from './components/Layout';
@@ -39,15 +41,7 @@ import Summary from './pages/Finance/Summary';
 import FinanceReports from './pages/Finance/FinanceReports';
 
 
-import {
-  Building2,
-  Users, ShoppingCart,
-  BarChart3, Settings as SettingsIcon,
-  Box,
-  FileText,
-  DollarSign,
-  User
-} from 'lucide-react';
+
 import LeadStats from './pages/Leads/LeadStats';
 import LeadDashboard from './pages/Leads/LeadDashboard';
 import LeadStatus from './pages/Leads/LeadStats';
@@ -61,38 +55,12 @@ import UserList from './pages/UserManagement/UserList';
 import UserForm from './pages/UserManagement/UserForm';
 import FinanceDashboard from './pages/Finance/FinanceDashboard';
 import Accounts from './pages/Finance/Accounts';
+import SalesDashboard from './pages/Sales/SalesDashboard';
 
-const adminNavigation = [
-  { name: 'Dashboard', href: '/dashboard', icon: Building2, roles: ['admin'] },
-  { name: 'Customers', href: '/customers', icon: User, roles: ['admin'] },
-  { name: 'Products', href: '/products', icon: Box, roles: ['admin'] },
-  { name: 'Sales', href: '/sales', icon: ShoppingCart, roles: ['admin'] },
-  { name: 'Leads', href: '/leads', icon: BarChart3, roles: ['admin', 'sales_manager', 'sales_exec'] },
-  { name: 'User Management', href: '/users', icon: Users, roles: ['admin'] },
-  { name: 'Finance', href: '/finance', icon: DollarSign, roles: ['admin', 'finance'] },
-  { name: 'Settings', href: '/settings', icon: SettingsIcon, roles: ['admin'] },
 
-];
-
-// Finance navigation for finance users
-const financeNavigation = [
-  { name: 'Dashboard', href: '/finance', icon: DollarSign, roles: ['finance'] },
-  { name: 'Accounts', href: '/finance/accounts', icon: DollarSign, roles: ['finance'] },
-  { name: 'Transactions', href: '/finance/transactions', icon: DollarSign, roles: ['finance'] },
-  { name: 'Summary', href: '/finance/summary', icon: DollarSign, roles: ['finance'] },
-];
-
-// Customer navigation
-const customerNavigation = [
-  { name: 'Dashboard', href: '/customer', icon: Building2, roles: ['customer'] },
-  { name: 'Orders', href: '/customer/orders', icon: ShoppingCart, roles: ['customer'] },
-  { name: 'Invoices', href: '/customer/invoices', icon: FileText, roles: ['customer'] },
-  { name: 'Payments', href: '/customer/payments', icon: DollarSign, roles: ['customer'] },
-  { name: 'Profile', href: '/customer/profile', icon: User, roles: ['customer'] },
-];
 
 export default function AppRoutes() {
-  const [isOrderFormOpen, setIsOrderFormOpen] = useState(false);
+
 
   return (
     <Routes>
@@ -130,43 +98,62 @@ export default function AppRoutes() {
             <Route path=":id/edit" element={<ProductForm />} />
           </Route>
 
-          {/* Finance Routes */}
-          <Route path="finance">
-            <Route index element={<FinanceDashboard />} />
-            <Route path="accounts">
-              <Route index element={<AccountsList />} />
-              <Route path="new" element={<AccountsForm />} />
-              <Route path=":id/edit" element={<AccountsForm />} />
+          {/* Finance Routes - Protected for both admin and finance roles */}
+          <Route 
+            path="finance" 
+            element={
+              <ProtectedRoute roles={[ROLES.ADMIN, ROLES.FINANCE]} />
+            }
+          >
+            <Route element={<FinanceLayout />}>
+              <Route index element={<FinanceDashboard />} />
+              <Route path="accounts">
+                <Route index element={<AccountsList />} />
+                <Route path="new" element={<AccountsForm />} />
+                <Route path=":id/edit" element={<AccountsForm />} />
+              </Route>
+              <Route path="transactions">
+                <Route index element={<TransactionsList />} />
+                <Route path="new" element={<TransactionForm />} />
+                <Route path=":id/edit" element={<TransactionForm />} />
+              </Route>
+              <Route path="summary" element={<Summary />} />
+              <Route path="reports" element={<FinanceReports />} />
             </Route>
-            <Route path="transactions">
-              <Route index element={<TransactionsList />} />
-              <Route path="new" element={<TransactionForm />} />
-              <Route path=":id/edit" element={<TransactionForm />} />
-            </Route>
-            <Route path="summary" element={<Summary />} />
-            <Route path="reports" element={<FinanceReports />} />
           </Route>
 
-          {/* Sales Routes */}
-          <Route path="sales">
-            <Route index element={<Dashboard />} />
-            <Route path="orders">
-              <Route index element={<Orders />} />
-              <Route path="new" element={<SalesOrderForm isOpen={true} onClose={() => window.history.back()} />} />
-              <Route path=":id" element={<OrderDetails />} />
-              <Route path=":id/edit" element={<SalesOrderForm isOpen={true} onClose={() => window.history.back()} />} />
+          {/* Sales Routes - Protected for admin and sales roles */}
+          <Route 
+            path="sales" 
+            element={
+              <ProtectedRoute roles={[ROLES.ADMIN, ROLES.SALES_MANAGER, ROLES.SALES_EXEC]} />
+            }
+          >
+            <Route element={<SalesLayout />}>
+              <Route index element={<SalesDashboard />} />
+              <Route path="orders">
+                <Route index element={<Orders />} />
+                <Route path="new" element={<SalesOrderForm isOpen={true} onClose={() => window.history.back()} />} />
+                <Route path=":id" element={<OrderDetails />} />
+                <Route path=":id/edit" element={<SalesOrderForm isOpen={true} onClose={() => window.history.back()} />} />
+              </Route>
+              <Route path="opportunities">
+                <Route index element={<Opportunities />} />
+                <Route path="new" element={<OpportunityForm />} />
+                <Route path=":id" element={<OpportunityForm />} />
+              </Route>
+              <Route path="invoices" element={<Invoices />} />
+              <Route path="reports" element={<Reports />} />
             </Route>
-            <Route path="opportunities">
-              <Route index element={<Opportunities />} />
-              <Route path="new" element={<OpportunityForm />} />
-              <Route path=":id" element={<OpportunityForm />} />
-            </Route>
-            <Route path="invoices" element={<Invoices />} />
-            <Route path="reports" element={<Reports />} />
           </Route>
 
-          {/* Leads Routes */}
-          <Route path="leads">
+          {/* Leads Routes - Protected for admin and sales roles */}
+          <Route 
+            path="leads" 
+            element={
+              <ProtectedRoute roles={[ROLES.ADMIN, ROLES.SALES_MANAGER, ROLES.SALES_EXEC]} />
+            }
+          >
             <Route element={<LeadsLayout />}>
               <Route index element={<LeadDashboard />} />
               <Route path="sources" element={<LeadSources />} />
@@ -178,8 +165,15 @@ export default function AppRoutes() {
             </Route>
           </Route>
 
-          {/* Customer Routes */}
-          <Route path="customer">
+          {/* Customer Routes - Protected for customer role */}
+          <Route 
+            path="customer" 
+            element={
+              <ProtectedRoute roles={[ROLES.CUSTOMER]}>
+                <CustomerLayout />
+              </ProtectedRoute>
+            }
+          >
             <Route index element={<CustomerDashboard />} />
             <Route path="orders" element={<MyOrders />} />
             <Route path="invoices" element={<MyInvoices />} />

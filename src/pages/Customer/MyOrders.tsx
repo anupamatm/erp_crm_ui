@@ -1,49 +1,54 @@
-import React, { useState, useEffect } from 'react';
-import { format } from 'date-fns';
-import { API } from '../../lib/api';
-import { useAuth } from '../../lib/auth';
+import React, { useEffect, useState } from 'react';
+import { CheckCircle, Truck, RefreshCw, AlertCircle } from 'lucide-react';
 
 interface Order {
-  _id: string;
-  orderNumber: string;
-  status: string;
-  totalAmount: number;
-  createdAt: string;
-  items: Array<{
-    product: {
-      name: string;
-    };
-    quantity: number;
-    price: number;
-  }>;
+  id: string;
+  date: string;
+  status: 'Delivered' | 'Shipped' | 'Processing' | 'Pending';
+  total: number;
+  items: number;
 }
 
 export default function MyOrders() {
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const { user } = useAuth();
 
   useEffect(() => {
-    const fetchOrders = async () => {
-      try {
-        setLoading(true);
-        setError('');
-        const response = await API.get(`/api/customers/${user?._id}/orders`);
-        setOrders(response.data);
-      } catch (err: any) {
-        const errorMessage = err.response?.data?.error || 'Failed to fetch orders';
-        setError(errorMessage);
-        console.error('Error fetching orders:', err);
-      } finally {
+    // Simulate API call with dummy data
+    const fetchDummyOrders = () => {
+      setLoading(true);
+      setTimeout(() => {
+        const dummyOrders: Order[] = [
+          {
+            id: 'ORD001',
+            date: new Date().toISOString(),
+            status: 'Delivered',
+            total: 99.99,
+            items: 2,
+          },
+          {
+            id: 'ORD002',
+            date: new Date().toISOString(),
+            status: 'Shipped',
+            total: 49.5,
+            items: 1,
+          },
+          {
+            id: 'ORD003',
+            date: new Date().toISOString(),
+            status: 'Processing',
+            total: 150.75,
+            items: 3,
+          },
+        ];
+        setOrders(dummyOrders);
         setLoading(false);
-      }
+      }, 1000); // simulate 1 second delay
     };
 
-    if (user?._id) {
-      fetchOrders();
-    }
-  }, [user?._id]);
+    fetchDummyOrders();
+  }, []);
 
   if (loading) {
     return <div className="flex justify-center items-center h-64">Loading...</div>;
@@ -70,55 +75,45 @@ export default function MyOrders() {
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-semibold text-gray-900">My Orders</h1>
       </div>
-
-      <div className="bg-white shadow-sm rounded-lg overflow-hidden">
+      <div className="bg-white shadow rounded-lg overflow-hidden">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Order Number
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Date
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Status
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Total Amount
-              </th>
-              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                Items
-              </th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Order ID</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Date</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Status</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Total</th>
+              <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">Items</th>
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
             {orders.map((order) => (
-              <tr key={order._id} className="hover:bg-gray-50">
-                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">
-                  {order.orderNumber}
-                </td>
+              <tr key={order.id} className="hover:bg-gray-50">
+                <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-blue-600">{order.id}</td>
                 <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  {format(new Date(order.createdAt), 'MMM d, yyyy')}
+                  {new Date(order.date).toLocaleDateString()}
                 </td>
                 <td className="px-6 py-4 whitespace-nowrap">
-                  <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full
-                    ${order.status === 'completed' ? 'bg-green-100 text-green-800' :
-                      order.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
-                        'bg-gray-100 text-gray-800'}`}>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
+                    order.status === 'Delivered'
+                      ? 'bg-green-100 text-green-800'
+                      : order.status === 'Shipped'
+                      ? 'bg-purple-100 text-purple-800'
+                      : order.status === 'Processing'
+                      ? 'bg-blue-100 text-blue-800'
+                      : 'bg-gray-100 text-gray-800'
+                  }`}>
+                    {order.status === 'Delivered' && <CheckCircle className="h-4 w-4 mr-1 text-green-500" />}
+                    {order.status === 'Shipped' && <Truck className="h-4 w-4 mr-1 text-purple-500" />}
+                    {order.status === 'Processing' && <RefreshCw className="h-4 w-4 mr-1 text-blue-500" />}
+                    {order.status === 'Pending' && <AlertCircle className="h-4 w-4 mr-1 text-yellow-500" />}
                     {order.status}
                   </span>
                 </td>
-                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                  ${order.totalAmount.toFixed(2)}
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900 font-semibold">
+                  ${order.total.toFixed(2)}
                 </td>
-                <td className="px-6 py-4 text-sm text-gray-500">
-                  {order.items.map((item, index) => (
-                    <div key={index} className="text-sm">
-                      {item.product.name} x {item.quantity}
-                    </div>
-                  ))}
-                </td>
+                <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{order.items}</td>
               </tr>
             ))}
           </tbody>
