@@ -56,6 +56,7 @@ import UserForm from './pages/UserManagement/UserForm';
 import FinanceDashboard from './pages/Finance/FinanceDashboard';
 import Accounts from './pages/Finance/Accounts';
 import SalesDashboard from './pages/Sales/SalesDashboard';
+import ProductDetails from './pages/Products/ProductDetails';
 
 
 
@@ -95,6 +96,7 @@ export default function AppRoutes() {
           <Route path="products">
             <Route index element={<Products />} />
             <Route path="new" element={<ProductForm />} />
+            <Route path=":id" element={<ProductDetails />} />
             <Route path=":id/edit" element={<ProductForm />} />
           </Route>
 
