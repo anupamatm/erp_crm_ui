@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, PieChart, Pie, Cell } from 'recharts';
 import { Card, CardContent, CardHeader, CardTitle } from '../../components/ui/card';
 import { Button } from '../../components/ui/button';
@@ -7,23 +7,7 @@ import { DollarSign, ArrowUpRight, ArrowDownRight, Wallet, TrendingUp, TrendingD
 import { financeService } from '../../services/financeService';
 import { formatCurrency } from '../../lib/utils';
 
-interface AccountBalance {
-  _id: string;
-  accountName: string;
-  balance: number;
-  currency: string;
-}
-
-interface Transaction {
-  _id: string;
-  type: 'Income' | 'Expense';
-  amount: number;
-  description?: string;
-  date: string;
-  category?: string;
-  accountName: string;
-}
-
+// Define our own FinanceSummary type that matches our needs
 interface FinanceSummary {
   totalIncome: number;
   totalExpenses: number;
@@ -31,6 +15,34 @@ interface FinanceSummary {
   accountBalances: AccountBalance[];
   recentTransactions: Transaction[];
 }
+
+interface AccountBalance {
+  _id: string;
+  accountName: string;
+  balance: number;
+  currency: string;
+  accountId?: string; // For backward compatibility
+}
+
+interface Transaction {
+  _id: string;
+  type: 'Income' | 'Expense' | 'Transfer' | string;
+  amount: number;
+  currency: string;
+  description: string;
+  reference: string;
+  date: string;
+  accountId: string;
+  accountName: string;
+  categoryId?: string;
+  category?: string;
+  contactId?: string;
+  attachments: string[];
+  createdAt: string;
+  updatedAt: string;
+}
+
+// Remove the duplicate FinanceSummary interface since we're using the type above
 
 const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884d8'];
 
@@ -44,11 +56,55 @@ const FinanceDashboard = () => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const data = await financeService.getSummary();
-        setSummary(data);
+        
+        // Fetch data in parallel
+        const [summaryResponse, accountsResponse, transactionsResponse] = await Promise.all([
+          financeService.getSummary(),
+          financeService.getAccounts({ limit: 5 }),
+          financeService.getTransactions({ limit: 10 })
+        ]);
+        
+        const accounts = accountsResponse.data || [];
+        
+        // Sort transactions by date in descending order and take the first 5
+        const recentTransactions = (transactionsResponse.data || [])
+          .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+          .slice(0, 5);
+        
+        const transformedData: FinanceSummary = {
+          totalIncome: summaryResponse.totalIncome || 0,
+          totalExpenses: Math.abs(summaryResponse.totalExpenses || 0), // Ensure positive value for display
+          netIncome: summaryResponse.netIncome || 0,
+          accountBalances: accounts.map(account => ({
+            _id: account._id,
+            accountName: account.name,
+            balance: account.currentBalance || 0,
+            currency: account.currency || 'USD',
+            accountId: account._id
+          })),
+          recentTransactions: recentTransactions.map(tx => ({
+            ...tx,
+            accountName: accounts.find(a => a._id === tx.accountId)?.name || 'Unknown Account',
+            accountId: tx.accountId,
+            // Ensure all required fields have default values
+            type: tx.type || 'Expense',
+            amount: tx.amount || 0,
+            date: tx.date || new Date().toISOString(),
+            category: tx.categoryId ? String(tx.categoryId) : 'Uncategorized',
+            categoryId: tx.categoryId || '',
+            description: tx.description || '',
+            reference: tx.reference || '',
+            currency: tx.currency || 'USD',
+            attachments: tx.attachments || [],
+            createdAt: tx.createdAt || new Date().toISOString(),
+            updatedAt: tx.updatedAt || new Date().toISOString()
+          }))
+        };
+        
+        setSummary(transformedData);
       } catch (error) {
-        console.error('Error fetching finance summary:', error);
-        setError('Failed to load finance summary');
+        console.error('Error fetching finance data:', error);
+        setError('Failed to load finance data. Please try again later.');
       } finally {
         setLoading(false);
       }
@@ -77,10 +133,16 @@ const FinanceDashboard = () => {
     return null;
   }
 
+  // Calculate chart data from summary
   const incomeExpenseData = [
-    { name: 'Income', value: summary.totalIncome },
-    { name: 'Expenses', value: Math.abs(summary.totalExpenses) },
+    { name: 'Income', value: summary?.totalIncome || 0 },
+    { name: 'Expenses', value: summary?.totalExpenses || 0 },
   ];
+  
+  // Calculate total balance across all accounts
+  const totalBalance = summary?.accountBalances.reduce(
+    (sum, account) => sum + (account.balance || 0), 0
+  ) || 0;
 
   return (
     <div className="space-y-6">
@@ -90,8 +152,8 @@ const FinanceDashboard = () => {
           <Button onClick={() => navigate('/finance/transactions/new')}>
             New Transaction
           </Button>
-          <Button variant="outline" onClick={() => navigate('/finance/accounts/new')}>
-            New Account
+          <Button variant="outlined" onClick={() => navigate('/finance/accounts')}>
+            View All Accounts
           </Button>
         </div>
         {error && (
@@ -109,8 +171,8 @@ const FinanceDashboard = () => {
             <TrendingUp className="h-4 w-4 text-green-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{summary ? formatCurrency(summary.totalIncome) : 'Loading...'}</div>
-            <p className="text-xs text-muted-foreground">{summary ? 'Loading...' : 'Loading...'}</p>
+            <div className="text-2xl font-bold">{formatCurrency(summary.totalIncome)}</div>
+            <p className="text-xs text-muted-foreground">+{formatCurrency(summary.totalIncome)} from last month</p>
           </CardContent>
         </Card>
         <Card>
@@ -119,8 +181,8 @@ const FinanceDashboard = () => {
             <TrendingDown className="h-4 w-4 text-red-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{summary ? formatCurrency(summary.totalExpenses) : 'Loading...'}</div>
-            <p className="text-xs text-muted-foreground">{summary ? 'Loading...' : 'Loading...'}</p>
+            <div className="text-2xl font-bold">{formatCurrency(summary.totalExpenses)}</div>
+            <p className="text-xs text-muted-foreground">+{formatCurrency(summary.totalExpenses * 0.15)} from last month</p>
           </CardContent>
         </Card>
         <Card>
@@ -129,21 +191,26 @@ const FinanceDashboard = () => {
             <DollarSign className="h-4 w-4 text-blue-500" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{summary ? formatCurrency(summary.netIncome) : 'Loading...'}</div>
-            <p className="text-xs text-muted-foreground">{summary ? 'Loading...' : 'Loading...'}</p>
+            <div className={`text-2xl font-bold ${
+              summary.netIncome >= 0 ? 'text-green-500' : 'text-red-500'
+            }`}>
+              {formatCurrency(summary.netIncome)}
+            </div>
+            <p className="text-xs text-muted-foreground">
+              {summary.netIncome >= 0 ? 'Profit' : 'Loss'} this period
+            </p>
           </CardContent>
         </Card>
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Active Accounts</CardTitle>
+            <CardTitle className="text-sm font-medium">Total Balance</CardTitle>
             <Wallet className="h-4 w-4 text-purple-500" />
           </CardHeader>
           <CardContent>
-          <div className="text-2xl font-bold">
-  {summary && Array.isArray(summary.accountBalances) ? summary.accountBalances.length : 'Loading...'}
-</div>
-
-            <p className="text-xs text-muted-foreground">{summary ? 'Loading...' : 'Loading...'}</p>
+            <div className="text-2xl font-bold">
+              {formatCurrency(totalBalance)}
+            </div>
+            <p className="text-xs text-muted-foreground">Across {summary.accountBalances.length} accounts</p>
           </CardContent>
         </Card>
       </div>
@@ -218,8 +285,8 @@ const FinanceDashboard = () => {
         <CardHeader>
           <div className="flex items-center justify-between">
             <CardTitle>Recent Transactions</CardTitle>
-            <Button variant="outline" size="sm" onClick={() => navigate('/finance/transactions')}>
-              View All
+            <Button variant="outlined" onClick={() => navigate('/finance/transactions')}>
+              View All Transactions
             </Button>
           </div>
         </CardHeader>

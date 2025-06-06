@@ -17,21 +17,19 @@ const Sidebar: React.FC<{ navigation: NavigationItem[] }> = ({ navigation }) => 
   };
 
   return (
-    <nav className="w-64 bg-gray-800 text-white relative">
+    <nav className="w-64 bg-gray-800 text-white sticky top-0 h-screen">
       <div className="p-4">
         <h1 className="text-xl font-bold text-white">ERP CRM</h1>
       </div>
 
       <div className="space-y-1 px-2 py-4">
         {navigation
-          .filter(item => item.roles.includes(user?.role || ''))
+          .filter(item => (item.roles || []).includes(user?.role || ''))
           .map((item) => {
-            // Handle customer navigation paths
-            const fullPath = user?.role === 'customer' 
-              ? item.href.replace('/', '/customer')
-              : item.href;
+            // Use the href as is since navigation items already have correct paths
+            const fullPath = item.href;
 
-            // Only use end prop for exact matches (dashboard)
+            // Only use end prop for exact matches (dashboard or customer dashboard)
             const isExact = fullPath === '/dashboard' || fullPath === '/customer';
 
             return (

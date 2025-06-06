@@ -51,6 +51,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const response = await API.post('/api/auth/refresh');
         localStorage.setItem('token', response.data.token);
+        API.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
+        
         setUser(response.data.user);
         setError(null);
         return true;
@@ -59,7 +61,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         // If refresh fails, clear token and user
         localStorage.removeItem('token');
         setUser(null);
-        setError('Authentication failed');
+        setError(null);
+        // setError('Authentication failed');
         return false;
       }
     } catch (err: any) {
@@ -80,7 +83,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         if (!isValid) {
           // Clear user state but don't redirect immediately
           setUser(null);
-          setError('Authentication required');
+          // setError('Authentication required');
+          setError(null);
         }
       } catch (error) {
         console.error('Auth check failed:', error);

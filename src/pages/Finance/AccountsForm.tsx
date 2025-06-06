@@ -112,9 +112,29 @@ const AccountsForm = ({ account, onSuccess }: AccountsFormProps) => {
       const fetchAccount = async () => {
         try {
           setIsLoading(true);
-          const data = await financeService.getAccountById(id);
-          setAccountData(data);
-          form.reset(data);
+          const fetchedData = await financeService.getAccountById(id);
+          // Process data to ensure numeric fields conform to AccountFormData (number, not number | undefined)
+          const dataForForm = {
+            ...fetchedData,
+            initialBalance: fetchedData.initialBalance ?? 0,
+            openingBalance: fetchedData.openingBalance ?? 0,
+            currentBalance: fetchedData.currentBalance ?? 0,
+            isActive: fetchedData.isActive ?? true, // Ensure isActive is boolean
+            // Ensure other optional fields that might be null from API are correctly undefined or '' for Zod
+            email: fetchedData.email === null ? '' : (fetchedData.email ?? undefined),
+            website: fetchedData.website === null ? '' : (fetchedData.website ?? undefined),
+            description: fetchedData.description ?? undefined, // Default to undefined if null
+            accountNumber: fetchedData.accountNumber ?? undefined,
+            bankName: fetchedData.bankName ?? undefined,
+            branch: fetchedData.branch ?? undefined,
+            ifscCode: fetchedData.ifscCode ?? undefined,
+            swiftCode: fetchedData.swiftCode ?? undefined,
+            taxId: fetchedData.taxId ?? undefined,
+            notes: fetchedData.notes ?? undefined,
+            phone: fetchedData.phone ?? undefined // Ensure phone is also handled
+          };
+          setAccountData(dataForForm as AccountFormData); // Assert type after processing
+          form.reset(dataForForm as AccountFormData); // Assert type after processing
         } catch (err) {
           setError('Failed to load account');
           console.error(err);
@@ -170,7 +190,7 @@ const AccountsForm = ({ account, onSuccess }: AccountsFormProps) => {
                   <CardHeader>
                     <div className="text-lg font-semibold">Basic Information</div>
                   </CardHeader>
-                  <CardContent className="p-6 pt-0">
+                  <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <FormField
                         name="name"
@@ -330,7 +350,7 @@ const AccountsForm = ({ account, onSuccess }: AccountsFormProps) => {
                   <CardHeader>
                     <div className="text-lg font-semibold">Bank Details</div>
                   </CardHeader>
-                  <CardContent className="p-6 pt-0">
+                  <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <FormField
                         name="bankName"
@@ -418,7 +438,7 @@ const AccountsForm = ({ account, onSuccess }: AccountsFormProps) => {
                   <CardHeader>
                     <div className="text-lg font-semibold">Contact Information</div>
                   </CardHeader>
-                  <CardContent className="p-6 pt-0">
+                  <CardContent>
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                       <FormField
                         name="email"

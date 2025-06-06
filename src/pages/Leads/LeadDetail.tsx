@@ -88,12 +88,10 @@ const LeadDetail = () => {
             <div>
               <label className="block text-sm font-medium text-gray-700">Status</label>
               <p className={`mt-1 px-2 py-1 rounded-full text-sm font-medium ${
-                   lead.status === 'converted' ? 'bg-green-100 text-green-800' :
-                   lead.status === 'lost' ? 'bg-red-100 text-red-800' :
-                   lead.status === 'qualified' ? 'bg-blue-100 text-blue-800' :
-                   'bg-gray-100 text-gray-800'
-                 }`}
-              >
+                  lead.status === 'converted' ? 'bg-green-100 text-green-800' :
+                 lead.status === 'lost' ? 'bg-red-100 text-red-800' : ''
+                  }`}>
+
                 {lead.status.replace('_', ' ').replace('-', ' ').toUpperCase()}
               </p>
             </div>

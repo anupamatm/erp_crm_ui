@@ -52,8 +52,8 @@ const LeadsLayout = () => {
         </div>
       </div>
 
-      {/* Content Area */}
-      <div className="flex-1 bg-gray-50 p-6">
+      {/* Main Content - Outlet will render the matched child route */}
+      <div className="flex-1 overflow-auto p-6">
         <Outlet />
       </div>
     </div>

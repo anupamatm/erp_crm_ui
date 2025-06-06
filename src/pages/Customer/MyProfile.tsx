@@ -27,10 +27,10 @@ export default function MyProfile() {
   });
 
   useEffect(() => {
+    console.log("user*********",user);
     const fetchProfile = async () => {
       try {
-        console.log('Fetching profile for user ID:', user?.id);
-        const response = await API.get(`/api/customers/${user?.id}/profile`);
+        const response = await API.get(`/api/customers/${user?.id}`);
         setProfileData(response.data);
       } catch (err: any) {
         const message = err?.response?.data?.message || err.message || 'Unknown error';
