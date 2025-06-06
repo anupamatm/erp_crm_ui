@@ -30,10 +30,14 @@ export default function MyProfile() {
     console.log("user*********",user);
     const fetchProfile = async () => {
       try {
-        const response = await API.get(`/api/customers/${user?.id}`);
+        const response = await API.get(`/api/userManagement/customers/${user?.id}/profile`);
         setProfileData(response.data);
       } catch (err) {
-        setError('Failed to fetch profile data');
+        if (err.response?.data?.error) {
+          setError(err.response.data.error);
+        } else {
+          setError('Failed to fetch profile data');
+        }
         console.error('Error fetching profile:', err);
       } finally {
         setLoading(false);
@@ -59,11 +63,15 @@ export default function MyProfile() {
     setSuccess('');
     
     try {
-      await API.put(`/api/customers/${user?.id}/profile`, profileData);
+      await API.put(`/api/userManagement/customers/${user?.id}/profile`, profileData);
       setSuccess('Profile updated successfully');
       setIsEditing(false);
     } catch (err) {
-      setError('Failed to update profile');
+      if (err.response?.data?.error) {
+        setError(err.response.data.error);
+      } else {
+        setError('Failed to update profile');
+      }
       console.error('Error updating profile:', err);
     }
   };

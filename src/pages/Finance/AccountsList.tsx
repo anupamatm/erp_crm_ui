@@ -147,11 +147,11 @@ const AccountsList = () => {
           description: 'Account deleted successfully',
         });
         fetchAccounts();
-      } catch (error) {
+      } catch (error: any) {
         console.error('Error deleting account:', error);
         toast({
           title: 'Error',
-          description: 'Failed to delete account',
+          description: error?.response?.data?.message || error?.message || 'Failed to delete account',
           variant: 'destructive',
         });
       }

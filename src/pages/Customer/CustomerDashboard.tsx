@@ -2,6 +2,8 @@
 import React, { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { customerSampleData } from '../../data/customerSampleData';
+import { useAuth } from '../../lib/auth';
+import { API } from '../../lib/api';
 import { 
   ShoppingCart, 
   Package, 
@@ -14,18 +16,28 @@ import {
 } from 'lucide-react';
 
 const CustomerDashboard = () => {
+  const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
+  const [profile, setProfile] = useState<any>(null);
+  const [error, setError] = useState("");
   const [data, setData] = useState(customerSampleData);
 
   useEffect(() => {
-    // Simulate API call
-    const timer = setTimeout(() => {
-      setData(customerSampleData);
-      setIsLoading(false);
-    }, 500);
-
-    return () => clearTimeout(timer);
-  }, []);
+    const fetchProfile = async () => {
+      if (!user?.id) return;
+      try {
+        const response = await API.get(`/api/userManagement/customers/${user.id}/profile`);
+        setProfile(response.data);
+      } catch (err: any) {
+        setError(err.response?.data?.error || "Failed to load profile");
+      } finally {
+        setIsLoading(false);
+      }
+    };
+    fetchProfile();
+    // For stats and invoices, keep using sample data for now.
+    setData(customerSampleData);
+  }, [user?.id]);
 
   const getStatusBadge = (status: string) => {
     const statusClasses: Record<string, string> = {
@@ -61,16 +73,17 @@ const CustomerDashboard = () => {
           <div className="flex items-center">
             <img 
               className="h-16 w-16 rounded-full" 
-              src={data.profile.avatar} 
-              alt={data.profile.name} 
+              src={profile?.avatar || data.profile.avatar} 
+              alt={profile?.name || data.profile.name} 
             />
             <div className="ml-4">
-              <h1 className="text-2xl font-bold text-gray-900">{data.profile.name}</h1>
-              <p className="text-gray-600">{data.profile.company}</p>
+              <h1 className="text-2xl font-bold text-gray-900">{profile?.name || data.profile.name}</h1>
+              <p className="text-gray-600">{profile?.company || data.profile.company}</p>
+              <p className="text-gray-500 text-sm">{profile?.email || data.profile.email}</p>
             </div>
             <div className="ml-auto">
               <span className="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-green-100 text-green-800">
-                {data.profile.status}
+                {profile?.status || data.profile.status}
               </span>
             </div>
           </div>

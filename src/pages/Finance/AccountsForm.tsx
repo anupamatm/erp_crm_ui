@@ -112,7 +112,7 @@ const AccountsForm = ({ account, onSuccess }: AccountsFormProps) => {
       const fetchAccount = async () => {
         try {
           setIsLoading(true);
-          const fetchedData = await financeService.getAccountById(id);
+          const fetchedData = await financeService.getAccount(id);
           // Process data to ensure numeric fields conform to AccountFormData (number, not number | undefined)
           const dataForForm = {
             ...fetchedData,
