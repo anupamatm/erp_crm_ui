@@ -50,6 +50,13 @@ import OrderDetails from './pages/Sales/OrderDetails';
 import UserList from './pages/UserManagement/UserList';
 import UserForm from './pages/UserManagement/UserForm';
 
+
+import QuotationSummary from './pages/Sales/QuotationSummary';
+import QuotationForm from './pages/Sales/QuotationForm';
+import QuotationView from './pages/Sales/QuotationView';
+import InvoiceForm from './pages/Sales/InvoiceForm';
+import InvoiceView from './pages/Sales/InvoiceView';
+
 const adminNavigation = [
   { name: 'Dashboard', href: '/', icon: Building2, roles: ['admin'] },
   { name: 'Customers', href: '/customers', icon: User, roles: ['admin'] },
@@ -134,8 +141,24 @@ export default function AppRoutes() {
             <Route path="opportunities/new" element={<OpportunityForm />} />
             <Route path="opportunities/:id/edit" element={<OpportunityForm />} />
             <Route path="/sales/orders/:id" element={<OrderDetails />} />
-            <Route path="invoices" element={<Invoices />} />
+            {/* <Route path="invoices" element={<Invoices />} /> */}
             <Route path="reports" element={<Reports />} />
+
+
+
+            <Route path="quotations" element={<QuotationView />} />
+<Route path="quotations/new" element={<QuotationForm />} />
+<Route path="quotations/edit/:id" element={<QuotationForm />} />
+<Route path="quotations/:id" element={<QuotationView />} />
+<Route path="quotations/new" element={<QuotationForm />} />
+
+ {/* Only if you show quotation detail */}
+
+            <Route path="/sales/invoices" element={<Invoices />} />
+        <Route path="/sales/invoices/new" element={<InvoiceForm />} />
+        <Route path="/sales/invoices/:id/edit" element={<InvoiceForm />} />
+        <Route path="/sales/invoices/:id" element={<InvoiceView />} />
+
           </Route>
           {/* Leads Module */}
           <Route path="leads" element={<LeadsLayout />}>
