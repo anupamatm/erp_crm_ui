@@ -3,11 +3,15 @@ import { useForm, useFieldArray } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import * as z from 'zod';
 import { useAuth } from '../../lib/auth';
-import CustomerService, { Customer } from '../../services/customerService';
-import ProductService, { Product } from '../../services/productService';
+import CustomerService from '../../services/customerService';
+import type { Customer } from '../../types/customer';
+import ProductService from '../../services/productService';
+import type { Product } from '../../types/product';
 import { SalesOrderService } from '../../services/SalesOrderService';
+import type { SalesOrder, OrderItem, OrderStatus, PaymentStatus, PaymentTerms } from '../../types/SalesOrder';
 import Modal from '../../components/Modal';
 import { useNavigate } from 'react-router-dom';
+
 
 // Validation schema
 const salesOrderSchema = z.object({
@@ -17,6 +21,7 @@ const salesOrderSchema = z.object({
       product: z.string().nonempty('Please select a product'),
       quantity: z.number().min(1, 'Quantity must be at least 1'),
       unitPrice: z.number().min(0, 'Price must be at least 0'),
+      discount: z.number().min(0).max(100).default(0),
       total: z.number().min(0, 'Total must be at least 0')
     })
   ).min(1, 'Please add at least one item'),
@@ -34,10 +39,12 @@ const salesOrderSchema = z.object({
     postalCode: z.string().nonempty('Please enter a postal code'),
     country: z.string().nonempty('Please enter a country')
   }),
-  terms: z.string().nonempty('Please enter terms'),
+  terms: z.string().default(''),
   deliveryDate: z.string().min(1, 'Please select a delivery date'),
-  total: z.number().min(0, 'Total must be at least 0'),
-  status: z.string().nonempty('Please select a status'),
+  totalAmount: z.number().min(0, 'Total must be at least 0'),
+  status: z.enum(['draft', 'pending', 'confirmed', 'processing', 'shipped', 'delivered', 'cancelled']).default('draft'),
+  paymentStatus: z.enum(['pending', 'paid', 'partially_paid', 'overdue', 'refunded', 'failed']).default('pending'),
+  paymentTerms: z.enum(['due_on_receipt', 'net_7', 'net_15', 'net_30', 'net_60']).default('net_30'),
   orderNumber: z.string().optional()
 });
 
@@ -48,19 +55,21 @@ interface SalesOrderFormProps {
   onClose: () => void;
   onSuccess?: () => void;
   order?: SalesOrder;
+  title?: string;
 }
 
 const SalesOrderForm: React.FC<SalesOrderFormProps> = ({ 
   isOpen, 
   onClose, 
   onSuccess,
-  order 
+  order,
+  title = order ? 'Edit Sales Order' : 'Create Sales Order'
 }) => {
-  const { user } = useAuth();
+  const { user } = useAuth() || {};
   const navigate = useNavigate();
   const [customers, setCustomers] = useState<Customer[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
-  const [loading, setLoading] = useState({ customers: false, products: false });
+  const [_loading, setLoading] = useState(false);
 
   // Check if user is authenticated
   useEffect(() => {
@@ -81,75 +90,171 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
 
   const generateOrderNumber = async (): Promise<string> => {
     try {
-      // Get the current year and month
-      const now = new Date();
-      const year = now.getFullYear().toString().slice(-2);
-      const month = (now.getMonth() + 1).toString().padStart(2, '0');
-      
-      // Get the last order number from the database
+      // Try to get the last order
       const lastOrder = await SalesOrderService.getLastOrder();
-      let sequence = 1;
       
-      if (lastOrder && lastOrder.orderNumber) {
-        // Extract the sequence number from the last order
-        const match = lastOrder.orderNumber.match(/\d+$/);
+      if (lastOrder?.orderNumber) {
+        const orderNumber = lastOrder.orderNumber;
+        const match = orderNumber.match(/(\d+)$/);
         if (match) {
-          sequence = parseInt(match[0]) + 1;
+          const lastNumber = parseInt(match[1], 10);
+          if (!isNaN(lastNumber)) {
+            return `ORD-${String(lastNumber + 1).padStart(4, '0')}`;
+          }
         }
       }
       
-      // Format the order number as: YYMM-####
-      const orderNumber = `${year}${month}-${sequence.toString().padStart(4, '0')}`;
-      console.log('Generated order number:', orderNumber);
-      return orderNumber;
+      // Fallback to timestamp-based order number
+      const now = new Date();
+      const year = now.getFullYear().toString().slice(-2).padStart(2, '0');
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const day = now.getDate().toString().padStart(2, '0');
+      const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+      
+      return `ORD-${year}${month}${day}-${random}`;
+      
     } catch (error) {
-      console.error('Error generating order number:', error);
-      throw new Error('Failed to generate order number. Please try again.');
+      console.error('Error generating order number, using fallback:', error);
+      // Fallback to timestamp-based order number on error
+      const now = new Date();
+      const year = now.getFullYear().toString().slice(-2).padStart(2, '0');
+      const month = (now.getMonth() + 1).toString().padStart(2, '0');
+      const day = now.getDate().toString().padStart(2, '0');
+      const random = Math.floor(Math.random() * 1000).toString().padStart(3, '0');
+      
+      return `ORD-${year}${month}${day}-${random}`;
     }
   };
 
   // Form initialization
-  const { 
-    register, 
-    control, 
-    handleSubmit, 
-    reset, 
-    setValue, 
-    formState: { errors, isSubmitting } 
-  } = useForm<SalesOrderFormData>({ 
-    resolver: zodResolver(salesOrderSchema), 
-    mode: 'onBlur',
-    defaultValues: {
-      customer: '',
-      items: [{ product: '', quantity: 1, unitPrice: 0, total: 0 }],
-      shippingAddress: {
-        street: '',
-        city: '',
-        state: '',
-        postalCode: '',
-        country: ''
-      },
-      billingAddress: {
-        street: '',
-        city: '',
-        state: '',
-        postalCode: '',
-        country: ''
-      },
-      terms: '',
-      deliveryDate: formatDate(new Date()),
-      total: 0,
-      status: 'pending',
-      orderNumber: ''
-    }
-  });
+ // Form initialization
+const methods = useForm<SalesOrderFormData>({
+  resolver: zodResolver(salesOrderSchema),
+  defaultValues: {
+    customer: '',
+    status: 'draft',
+    paymentStatus: 'pending',
+    paymentTerms: 'net_30',
+    items: [{
+      product: '',
+      quantity: 1,
+      unitPrice: 0,
+      discount: 0,
+      total: 0
+    }],
+    billingAddress: {
+      street: '',
+      city: '',
+      state: '',
+      postalCode: '',
+      country: ''
+    },
+    shippingAddress: {
+      street: '',
+      city: '',
+      state: '',
+      postalCode: '',
+      country: ''
+    },
+    terms: '',
+    deliveryDate: '',
+    totalAmount: 0,
+    orderNumber: ''
+  }
+});
 
-  const { fields, append, remove } = useFieldArray({ control, name: 'items' });
+// Update form values when order prop changes
+useEffect(() => {
+  if (order) {
+    methods.reset({
+      customer: order.customer?._id || '',
+      items: order.items?.map(item => ({
+        product: item.product?._id || '',
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        discount: item.discount || 0,
+        total: item.subTotal || 0
+      })) || [{ product: '', quantity: 1, unitPrice: 0, discount: 0, total: 0 }],
+      billingAddress: order.billingAddress || {
+        street: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        country: ''
+      },
+      shippingAddress: order.shippingAddress || {
+        street: '',
+        city: '',
+        state: '',
+        postalCode: '',
+        country: ''
+      },
+      terms: order.notes || '',
+      deliveryDate: order.deliveryDate?.split('T')[0] || '',
+      totalAmount: order.totalAmount || 0,
+      status: order.status || 'draft',
+      paymentStatus: order.paymentStatus || 'pending',
+      paymentTerms: order.paymentTerms || 'net_30',
+      orderNumber: order.orderNumber || ''
+    });
+  }
+}, [order, methods]);
+
+// Destructure form methods and state
+const {
+  register,
+  handleSubmit,
+  formState: { errors, isSubmitting },  // Add isSubmitting here
+  reset,
+  setValue,
+  watch,
+  control
+} = methods;
+
+const { fields, append, remove } = useFieldArray({ 
+  control, 
+  name: 'items' 
+});
+
+const items = watch('items');
+
+  // Ensure order total updates when any item changes (product, quantity, etc)
+  // Keep all recalculation in a single effect for reliability
+  useEffect(() => {
+    if (items && products) {
+      items.forEach((item, idx) => {
+        const product = products.find(p => p._id === item.product);
+        const unitPrice = product ? Number(product.price) : 0;
+        const quantity = Number(item.quantity) || 0;
+        const newTotal = unitPrice * quantity;
+        if (item.product && item.unitPrice !== unitPrice) setValue(`items.${idx}.unitPrice`, unitPrice, { shouldValidate: true, shouldDirty: true });
+        if (item.product && item.total !== newTotal) setValue(`items.${idx}.total`, newTotal, { shouldValidate: true, shouldDirty: true });
+      });
+    }
+    calculateTotal();
+  }, [JSON.stringify(items), products]);
+
+  // Reset form when modal is closed or opened for new order
+  useEffect(() => {
+    if (isOpen && !order) {
+      reset({
+        customer: '',
+        items: [{ product: '', quantity: 1, unitPrice: 0, total: 0 }],
+        billingAddress: { street: '', city: '', state: '', postalCode: '', country: '' },
+        shippingAddress: { street: '', city: '', state: '', postalCode: '', country: '' },
+        terms: '',
+        deliveryDate: '',
+        totalAmount: 0,
+        status: 'pending',
+        orderNumber: ''
+      });
+    }
+  }, [isOpen, order, reset]);
 
   // Fetch data
   const fetchData = async () => {
     try {
-      setLoading({ customers: true, products: true });
+      setLoading(true);
       
       // Fetch customers
       const customerResponse = await CustomerService.getCustomers();
@@ -157,115 +262,129 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
       
       // Fetch products
       const productResponse = await ProductService.getProducts();
-      setProducts(productResponse.data);
+      console.log('ProductService.getProducts() response:', productResponse);
+      setProducts(Array.isArray(productResponse.data) ? productResponse.data : []);
     } catch (error) {
       console.error('Error fetching data:', error);
       alert('Failed to load form data. Please try again.');
     } finally {
-      setLoading({ customers: false, products: false });
+      setLoading(false);
     }
   };
 
   // Calculate total for all items
   const calculateTotal = () => {
-    const subtotal = fields.reduce((sum, item) => {
+    if (!items || items.length === 0) {
+      setValue('totalAmount', 0);
+      return;
+    }
+    const subtotal = items.reduce((sum: number, item: any) => {
       const itemTotal = calculateItemTotal(item);
       return sum + itemTotal;
     }, 0);
-    setValue('total', subtotal);
+    setValue('totalAmount', Number(subtotal));
   };
 
   // Calculate total for a single item
   const calculateItemTotal = (item: any) => {
     const selectedProduct = products.find(p => p._id === item.product);
     const unitPrice = selectedProduct?.price || 0;
-    return unitPrice * item.quantity;
+    const quantity = Number(item.quantity) || 0;
+    const discount = Number(item.discount) || 0;
+    return unitPrice * quantity * (1 - discount / 100);
+  };
+
+  // Handle form submission
+  const handleFormSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    handleSubmit(onSubmit)(e);
   };
 
   // Form submission handler
-  const onSubmit = async (data: SalesOrderFormData) => {
+  const onSubmit = async (formData: any) => {
+    if (!user?.id) {
+      navigate('/login');
+      return;
+    }
+  
     try {
-      // Ensure we have a valid user
-      if (!user || !user.id) {
-        throw new Error('User is not authenticated');
-      }
-
-      // Generate a unique order number
-      const orderNumber = await generateOrderNumber();
-
-      // Transform form data to match backend requirements
-      const orderData = transformFormDataToOrder(data, orderNumber);
+      setLoading(true);
       
-      // Validate required fields
-      if (!orderData.customer) {
-        throw new Error('Customer is required');
-      }
-      if (!orderData.items || orderData.items.length === 0) {
-        throw new Error('At least one item is required');
-      }
-      if (!orderData.billingAddress.street) {
-        throw new Error('Billing address is required');
-      }
-      if (!orderData.deliveryDate) {
-        throw new Error('Delivery date is required');
-      }
-      if (!orderData.status) {
-        throw new Error('Status is required');
-      }
-      if (!orderData.orderNumber) {
-        throw new Error('Order number is required');
-      }
-
-      // Create or update order
-      if (order) {
-        await SalesOrderService.updateSalesOrder(order._id, orderData);
+      // Generate order number for new orders
+      const orderNumber = order?.orderNumber || await generateOrderNumber();
+      const orderData = transformFormDataToOrder(formData, orderNumber);
+      
+      // Prepare the order with user info
+      const orderPayload = {
+        ...orderData,
+        createdBy: user.id,
+        assignedTo: user.id,
+        // Ensure all required fields are included
+        status: formData.status || 'pending',
+        paymentStatus: formData.paymentStatus || 'pending',
+        paymentTerms: formData.paymentTerms || 'net_30',
+        total: orderData.totalAmount // Ensure total is included
+      };
+  
+      console.log('Submitting order:', orderPayload);
+  
+      if (order?._id) {
+        await SalesOrderService.updateSalesOrder(order._id, orderPayload);
       } else {
-        await SalesOrderService.createSalesOrder(orderData);
+        await SalesOrderService.createSalesOrder(orderPayload);
       }
-
-      // Close modal and refresh list
+  
       onClose();
       onSuccess?.();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving order:', error);
-      if (error instanceof Error && error.message === 'User is not authenticated') {
-        navigate('/login');
-      } else {
-        alert(error instanceof Error ? error.message : 'Failed to save order. Please try again.');
-      }
+      const errorMessage = error.response?.data?.message || error.message || 'Failed to save order';
+      alert(errorMessage);
+    } finally {
+      setLoading(false);
     }
   };
-
-  // Transform form data
-  const transformFormDataToOrder = (formData: SalesOrderFormData, orderNumber: string): Partial<SalesOrder> => {
-    const items = formData.items.map(item => {
-      const selectedProduct = products.find(p => p._id === item.product);
-      const unitPrice = selectedProduct?.price || 0;
-      const total = item.quantity * unitPrice;
+  // Transform form data to match SalesOrder type
+  const transformFormDataToOrder = (formData: any, orderNumber: string) => {
+    // Calculate totals
+    const items = formData.items.map((item: any) => {
+      const quantity = Number(item.quantity) || 0;
+      const unitPrice = Number(item.unitPrice) || 0;
+      const discount = Number(item.discount) || 0;
+      const subTotal = quantity * unitPrice * (1 - discount / 100);
       
       return {
         product: item.product,
-        quantity: item.quantity,
+        quantity,
         unitPrice,
-        total
+        discount,
+        tax: 0,
+        total: subTotal,  // Ensure each item has a total
+        subTotal
       };
     });
-
-    const transformedData = {
+  
+    const subtotal = items.reduce((sum: number, item: any) => sum + (item.quantity * item.unitPrice), 0);
+    const total = items.reduce((sum: number, item: any) => sum + item.subTotal, 0);
+  
+    return {
+      orderNumber,
       customer: formData.customer,
       items,
+      subtotal,
+      discountAmount: 0,
+      taxAmount: 0,
+      shippingCost: 0,
+      totalAmount: total,  // Ensure total is set
+      status: formData.status || 'pending',
       billingAddress: formData.billingAddress,
       shippingAddress: formData.shippingAddress,
-      terms: formData.terms,
+      terms: formData.terms || '',
       deliveryDate: formData.deliveryDate,
-      total: items.reduce((sum, item) => sum + item.total, 0),
-      status: formData.status,
-      assignedTo: user.id,
-      createdBy: user.id,
-      orderNumber
+      paymentStatus: formData.paymentStatus || 'pending',
+      paymentTerms: formData.paymentTerms || 'net_30',
+      total: total  // Add top-level total field
     };
-
-    return transformedData;
   };
 
   // Fetch data when modal opens
@@ -278,10 +397,14 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
   if (!isOpen) return null;
 
   return (
-    <Modal isOpen={isOpen} onClose={onClose}>
+    <Modal 
+      isOpen={isOpen} 
+      onClose={onClose}
+      title={title}
+    >
       <div className="max-w-4xl mx-auto p-6">
-        <h1 className="text-2xl font-bold mb-6">Create New Sales Order</h1>
-        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+        <h1 className="text-2xl font-bold mb-6">{order ? 'Edit' : 'Create New'} Sales Order</h1>
+        <form onSubmit={handleFormSubmit} className="space-y-6">
           {/* Customer Selection */}
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-2">Customer</label>
@@ -309,44 +432,63 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
             <h2 className="text-lg font-medium mb-4">Order Items</h2>
             <div className="space-y-4">
               {fields.map((item, index) => (
-                <div key={item.id} className="bg-white rounded-lg shadow p-6 mb-6">
+                <div key={item.id} className="bg-white rounded-lg shadow p-6 mb-6 relative">
+                  {/* Remove item button */}
+                  {fields.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        remove(index);
+                      }}
+                      className="absolute top-2 right-2 text-red-500 hover:text-red-700 text-lg font-bold px-2 py-1 rounded"
+                      title="Remove Item"
+                    >
+                      ×
+                    </button>
+                  )}
                   <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Product</label>
                       <select
                         {...register(`items.${index}.product`)}
-                        onChange={(e) => {
+                        onChange={e => {
                           const productId = e.target.value;
+                          setValue(`items.${index}.product`, productId, { shouldValidate: true, shouldDirty: true });
                           const product = products.find(p => p._id === productId);
-                          if (product) {
-                            setValue(`items.${index}.unitPrice`, product.price);
-                            setValue(`items.${index}.total`, product.price * Number(fields[index].quantity));
-                            calculateTotal(); // Recalculate total when product changes
-                          }
+                          const unitPrice = product ? Number(product.price) : 0;
+                          const quantity = Number(items[index]?.quantity) || 0;
+                          setValue(`items.${index}.unitPrice`, unitPrice, { shouldValidate: true, shouldDirty: true });
+                          setValue(`items.${index}.total`, unitPrice * quantity, { shouldValidate: true, shouldDirty: true });
                         }}
                         className="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                       >
                         <option value="">Select a product</option>
-                        {products.map(product => (
-                          <option key={product._id} value={product._id}>
-                            {product.name} - ${product.price}
-                          </option>
-                        ))}
+                        {Array.isArray(products) && products.length > 0 ? (
+                          products.map(product => (
+                            <option key={product._id} value={product._id}>
+                              {product.name} - ${product.price}
+                            </option>
+                          ))
+                        ) : (
+                          <option disabled>No products found</option>
+                        )}
                       </select>
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-700 mb-2">Quantity</label>
                       <input
                         type="number"
-                        min="1"
+                        min={1}
+                        step={1}
                         {...register(`items.${index}.quantity`, { valueAsNumber: true })}
-                        onChange={(e) => {
-                          const quantity = Number(e.target.value);
-                          const product = products.find(p => p._id === fields[index].product);
-                          if (product) {
-                            setValue(`items.${index}.total`, product.price * quantity);
-                            calculateTotal(); // Recalculate total when quantity changes
-                          }
+                        onChange={e => {
+                          const qty = Number(e.target.value);
+                          setValue(`items.${index}.quantity`, qty, { shouldValidate: true, shouldDirty: true });
+                          const productId = items[index]?.product;
+                          const product = products.find(p => p._id === productId);
+                          const unitPrice = product ? Number(product.price) : 0;
+                          setValue(`items.${index}.unitPrice`, unitPrice, { shouldValidate: true, shouldDirty: true });
+                          setValue(`items.${index}.total`, unitPrice * qty, { shouldValidate: true, shouldDirty: true });
                         }}
                         className="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
                       />
@@ -548,15 +690,15 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
 
           {/* Total */}
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-2">Order Total</label>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Order Total </label>
             <input
               type="number"
-              {...register('total')}
+              value={watch('totalAmount') ?? 0}
               readOnly
               className="w-full border-gray-300 rounded-md shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50"
             />
-            {errors.total && (
-              <p className="mt-1 text-sm text-red-600">{errors.total.message}</p>
+            {errors.totalAmount && (
+              <p className="mt-1 text-sm text-red-600">{errors.totalAmount.message}</p>
             )}
           </div>
 
@@ -612,9 +754,10 @@ const SalesOrderForm: React.FC<SalesOrderFormProps> = ({
             </button>
             <button
               type="submit"
+              disabled={_loading || isSubmitting}  // Add isSubmitting from useForm
               className="px-4 py-2 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
             >
-              {isSubmitting ? 'Saving...' : 'Save'}
+              {_loading || isSubmitting ? 'Saving...' : 'Save Order'}
             </button>
           </div>
         </form>

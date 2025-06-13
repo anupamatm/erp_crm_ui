@@ -29,6 +29,7 @@ import Invoices from './pages/Sales/Invoices';
 import Reports from './pages/Sales/Reports';
 import ProductForm from './pages/products/ProductForm';
 import SalesOrderForm from './pages/Sales/SalesOrderForm';
+import SimpleOrderForm from './pages/Sales/SimpleOrderForm';
 import OpportunityForm from './pages/Sales/OpportunityForm';
 import SalesLayout from './pages/Sales/SalesLayout';
 import LeadsLayout from './pages/Leads/LeadsLayout';
@@ -56,6 +57,15 @@ import UserForm from './pages/UserManagement/UserForm';
 import FinanceDashboard from './pages/Finance/FinanceDashboard';
 import Accounts from './pages/Finance/Accounts';
 import SalesDashboard from './pages/Sales/SalesDashboard';
+import HRLayout from './pages/HR/HRLayout';
+import HRDashboard from './pages/HR/HRDashboard';
+import Employees from './pages/HR/Employees';
+import Attendance from './pages/HR/Attendance';
+import Departments from './pages/HR/Departments';
+import LeaveManagement from './pages/HR/LeaveManagement';
+import Payroll from './pages/HR/Payroll';
+import Performance from './pages/HR/Performance';
+
 
 
 
@@ -70,7 +80,7 @@ export default function AppRoutes() {
       <Route path="/unauthorized" element={<Unauthorized />} />
 
       {/* Protected Routes */}
-      <Route element={<ProtectedRoute roles={['admin', 'finance', 'sales_manager', 'sales_exec', 'customer']} />}>
+      <Route element={<ProtectedRoute roles={['admin', 'finance', 'sales_manager', 'sales_exec', 'customer', 'hr']} />}>
         <Route path="/" element={<ProtectedRouteLayout />}>
           {/* Redirect to role-specific dashboard */}
           <Route index element={<RedirectByRole />} />
@@ -122,6 +132,44 @@ export default function AppRoutes() {
             </Route>
           </Route>
 
+          {/* HR Routes - Protected for admin and hr roles */}
+          <Route 
+            path="hr" 
+            element={
+              <ProtectedRoute roles={[ROLES.ADMIN, ROLES.HR]} />
+            }
+          >
+            <Route element={<HRLayout />}>
+              <Route index element={<HRDashboard />} />
+              <Route path="employees">
+                <Route index element={<Employees />} />
+                {/* <Route path="new" element={<EmployeeForm />} />
+                <Route path=":id" element={<EmployeeView />} />
+                <Route path=":id/edit" element={<EmployeeForm />} /> */}
+              </Route>
+              <Route path="attendance" element={<Attendance />} />
+              <Route path="departments" element={<Departments />} />
+              <Route path="leaves">
+                <Route index element={<LeaveManagement />} />
+                {/* <Route path="new" element={<LeaveForm />} />
+                <Route path=":id" element={<LeaveView />} />
+                <Route path=":id/edit" element={<LeaveForm />} /> */}
+              </Route>
+              <Route path="payroll">
+                <Route index element={<Payroll />} />
+                {/* <Route path="new" element={<PayrollForm />} />
+                <Route path=":id" element={<PayrollView />} />
+                <Route path=":id/edit" element={<PayrollForm />} /> */}
+              </Route>
+              <Route path="performance">
+                <Route index element={<Performance />} />
+                {/* <Route path="new" element={<PerformanceForm />} />
+                <Route path=":id" element={<PerformanceView />} />
+                <Route path=":id/edit" element={<PerformanceForm />} /> */}
+              </Route>
+            </Route>
+          </Route>
+
           {/* Sales Routes - Protected for admin and sales roles */}
           <Route 
             path="sales" 
@@ -137,6 +185,7 @@ export default function AppRoutes() {
                 <Route path=":id" element={<OrderDetails />} />
                 <Route path=":id/edit" element={<SalesOrderForm isOpen={true} onClose={() => window.history.back()} />} />
               </Route>
+
               <Route path="opportunities">
                 <Route index element={<Opportunities />} />
                 <Route path="new" element={<OpportunityForm />} />

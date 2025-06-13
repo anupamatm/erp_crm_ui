@@ -1,49 +1,47 @@
-// src/types/SalesOrder.ts
-export interface SalesOrderItem {
-    product: {
-      _id: string;
-      name: string;
-      price: number;
-    };
-    quantity: number;
-    unitPrice: number;
-    discount: number;
-    tax: number;
-    subTotal: number;
-  }
-  
-  export interface SalesOrder {
-    _id?: string;
-    orderNumber: string;
-    customer: {
-      _id: string;
-      name: string;
-      email: string;
-    };
-    items: SalesOrderItem[];
-    subtotal: number;
-    discountAmount: number;
-    taxAmount: number;
-    shippingCost: number;
-    totalAmount: number;
-    paymentStatus: 'pending' | 'partial' | 'paid' | 'overdue';
-    paymentTerms: 'immediate' | 'net15' | 'net30' | 'net60';
-    shippingAddress: {
-      street: string;
-      city: string;
-      state: string;
-      country: string;
-      zipCode: string;
-    };
-    billingAddress: {
-      street: string;
-      city: string;
-      state: string;
-      country: string;
-      zipCode: string;
-    };
-    notes: string;
-    status: 'draft' | 'confirmed' | 'shipped' | 'completed' | 'cancelled';
-    createdAt?: Date;
-    updatedAt?: Date;
-  }
+import { Address } from './common';
+
+export type OrderStatus = 'draft' | 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+export type PaymentStatus = 'pending' | 'paid' | 'partially_paid' | 'overdue' | 'refunded' | 'failed';
+export type PaymentTerms = 'due_on_receipt' | 'net_7' | 'net_15' | 'net_30' | 'net_60';
+
+export interface OrderItem {
+  product: {
+    _id: string;
+    name: string;
+    price: number;
+  };
+  quantity: number;
+  unitPrice: number;
+  discount: number;
+  total: number;
+}
+
+export interface SalesOrder {
+  _id?: string;
+  orderNumber: string;
+  customer: {
+    _id: string;
+    name: string;
+    email: string;
+  };
+  items: OrderItem[];
+  billingAddress?: Address;
+  shippingAddress?: Address;
+  notes?: string;
+  deliveryDate?: string;
+  terms?: string;
+  subtotal: number;
+  discountAmount: number;
+  taxAmount: number;
+  shippingCost: number;
+  totalAmount: number;
+  status: OrderStatus;
+  paymentStatus: PaymentStatus;
+  paymentTerms: PaymentTerms;
+  createdBy?: string;
+  assignedTo?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+// Removed the extra properties that were not part of the SalesOrder interface

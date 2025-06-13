@@ -20,21 +20,31 @@ class ProductService {
       // Handle different API response structures
       if (!response.data) {
         console.error('No data in response:', response);
-        return { products: [], total: 0, totalCount: 0 };
+        return { data: [], total: 0, totalCount: 0 };
       }
       
       // If response.data is an array, it's likely the direct products array
       if (Array.isArray(response.data)) {
         return {
-          products: response.data,
+          data: response.data,
           total: response.data.length,
           totalCount: response.data.length
+        };
+      }
+      
+      // If response.data.products is an array
+      if (Array.isArray(response.data.products)) {
+        return {
+          data: response.data.products,
+          total: response.data.total || 0,
+          totalCount: response.data.totalCount || 0
         };
       }
       
       // If response.data has a data property (common in paginated responses)
       if (response.data.data && Array.isArray(response.data.data)) {
         return {
+          data: response.data.data,
           products: response.data.data,
           total: response.data.total || response.data.data.length,
           totalCount: response.data.totalCount || response.data.data.length

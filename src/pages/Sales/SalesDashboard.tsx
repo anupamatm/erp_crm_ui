@@ -95,22 +95,20 @@ const Dashboard = () => {
       });
       console.log('Dashboard response:', response.data);
       
-      // Transform the response to match the expected DashboardData interface
+      // Use backend fields directly for dynamic dashboard
       const dashboardData = {
-        summary: {
-          totalRevenue: response.data.revenue || 0,
-          totalOrders: response.data.orders || 0,
-          averageOrderValue: response.data.averageOrderValue || 0,
-          pendingOrders: response.data.pendingOrders || 0,
-          activeOpportunities: response.data.activeOpportunities || 0,
-          conversionRate: response.data.conversionRate || 0
+        summary: response.data.summary || {
+          totalRevenue: 0,
+          totalOrders: 0,
+          averageOrderValue: 0,
+          pendingOrders: 0,
+          activeOpportunities: 0,
+          conversionRate: 0
         },
-        // Add mock data for other required fields
-        revenueByMonth: [],
-        opportunitiesByStage: [],
-        topProducts: []
+        revenueByMonth: response.data.revenueByMonth || [],
+        opportunitiesByStage: response.data.opportunitiesByStage || [],
+        topProducts: response.data.topProducts || []
       };
-      
       setData(dashboardData);
     } catch (err: any) {
       console.error('Dashboard Error:', err);

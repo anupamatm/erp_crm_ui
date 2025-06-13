@@ -5,7 +5,9 @@ import {
   MessageSquare, Tag, Calendar, Mail, 
   Bell, HelpCircle, LogOut, Home, 
   FileCheck, DollarSign, Package, Briefcase,
-  ClipboardList, TrendingUp, FileSearch, FileBarChart2
+  ClipboardList, TrendingUp, FileSearch, FileBarChart2,
+  Star,
+  Plus
 } from 'lucide-react';
 
 // Define navigation item type
@@ -22,7 +24,8 @@ export const ROLES = {
   FINANCE: 'finance',
   SALES_MANAGER: 'sales_manager',
   SALES_EXEC: 'sales_exec',
-  CUSTOMER: 'customer'
+  CUSTOMER: 'customer',
+  HR: 'hr'
 };
 
 // Helper function to create navigation items
@@ -47,6 +50,7 @@ export const adminNavigation: NavigationItem[] = [
   createNavItem('Finance', '/finance', DollarSign, [ROLES.ADMIN]),
   createNavItem('Sales', '/sales', Briefcase, [ROLES.ADMIN]),
   createNavItem('Leads', '/leads', ClipboardList, [ROLES.ADMIN]),
+  createNavItem('HR', '/hr', Users, [ROLES.ADMIN]),
   createNavItem('Settings', '/settings', Settings, [ROLES.ADMIN]),
 ];
 
@@ -63,10 +67,7 @@ export const financeNavigation: NavigationItem[] = [
 // Sales Navigation
 export const salesNavigation: NavigationItem[] = [
   createNavItem('Dashboard', '/sales', LayoutDashboard, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
-//   createNavItem('Orders', '/sales/orders', ShoppingCart, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
-//   createNavItem('Opportunities', '/sales/opportunities', TrendingUp, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
-//   createNavItem('Invoices', '/sales/invoices', FileText, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
-//   createNavItem('Reports', '/sales/reports', BarChart, [ROLES.SALES_MANAGER]),
+
   createNavItem('Leads', '/leads', ClipboardList, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
   createNavItem('Customers', '/customers', User, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
   createNavItem('Products', '/products', Package, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
@@ -81,6 +82,16 @@ export const customerNavigation: NavigationItem[] = [
   createNavItem('Profile', '/customer/profile', User, [ROLES.CUSTOMER]),
 ];
 
+// HR Navigation
+export const hrNavigation: NavigationItem[] = [
+  createNavItem('Dashboard', '/hr', LayoutDashboard, [ROLES.ADMIN, ROLES.HR]),
+  createNavItem('Employees', '/hr/employees', Users, [ROLES.ADMIN, ROLES.HR]),
+  createNavItem('Leaves', '/hr/leaves', Calendar, [ROLES.ADMIN, ROLES.HR]),
+  createNavItem('Payroll', '/hr/payroll', DollarSign, [ROLES.ADMIN, ROLES.HR]),
+  createNavItem('Performance', '/hr/performance', Star, [ROLES.ADMIN, ROLES.HR]),
+  createNavItem('Recruitment', '/hr/recruitment', Plus, [ROLES.ADMIN, ROLES.HR]),
+];
+
 // Navigation map for ProtectedRouteLayout
 const navigationMap: Record<string, NavigationItem[]> = {
   [ROLES.ADMIN]: adminNavigation, // Admin sees both admin and finance nav
@@ -88,6 +99,7 @@ const navigationMap: Record<string, NavigationItem[]> = {
   [ROLES.SALES_MANAGER]: salesNavigation,
   [ROLES.SALES_EXEC]: salesNavigation,
   [ROLES.CUSTOMER]: customerNavigation,
+  [ROLES.HR]: hrNavigation,
 };
 
 export const getNavigationForRole = (role: string): NavigationItem[] => {

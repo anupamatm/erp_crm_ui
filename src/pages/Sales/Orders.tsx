@@ -66,14 +66,24 @@ const Orders = () => {
   };
 
   const handleDeleteOrder = async (order: SalesOrder) => {
-    if (!window.confirm('Are you sure you want to delete this order?')) return;
+    if (!order._id) {
+      console.error('Cannot delete order: No order ID');
+      return;
+    }
+
+    if (!window.confirm(`Are you sure you want to delete order ${order.orderNumber}? This action cannot be undone.`)) {
+      return;
+    }
 
     try {
       await SalesOrderService.deleteSalesOrder(order._id);
-      fetchOrders();
+      // Refresh the orders list
+      fetchOrders(currentPage);
+      // Show success message
+      alert('Order deleted successfully');
     } catch (error) {
       console.error('Error deleting order:', error);
-      alert('Error deleting order');
+      alert(`Error deleting order: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   };
 
@@ -235,10 +245,12 @@ const Orders = () => {
                         {order.status}
                       </span>
                     </td>
-                    <td className="py-2">{formatCurrency(order.totalAmount)}</td>
+                    <td className="py-2">
+                      ${order.total?.toFixed(2) || '0.00'}
+                    </td>
                     <td className="py-2 text-right">
                       <button 
-                        onClick={() => handleViewOrder(order._id)}
+                        onClick={() => handleViewOrder(order._id || '')}
                         className="text-blue-600 hover:text-blue-800 mr-2"
                         title="View Order"
                       >
