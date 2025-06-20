@@ -45,6 +45,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setError(null);
         return false;
       }
+      
 
       // Try to refresh token
       try {

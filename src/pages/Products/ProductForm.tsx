@@ -1,6 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
 import ProductService from '../../services/productService';
+
+const categoryOptions = ['Electronics', 'Furniture', 'Dress', 'Books', 'Groceries'];
+const statusOptions = ['in_stock', 'out_of_stock', 'discontinued', 'not_set'];
 
 interface Product {
   _id?: string;
@@ -9,6 +11,7 @@ interface Product {
   price: number;
   category: string;
   stock: number;
+  status: string;
   imageUrl?: string;
   createdAt?: string;
   updatedAt?: string;
@@ -16,7 +19,7 @@ interface Product {
 
 interface ProductFormProps {
   isModal: boolean;
-  productId?: string;
+  productId?: string | null;
   onClose: () => void;
   onSuccess: () => void;
 }
@@ -28,31 +31,42 @@ const ProductForm: React.FC<ProductFormProps> = ({ isModal, productId, onClose, 
     price: 0,
     category: '',
     stock: 0,
+    status: 'not_set',
   });
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const navigate = useNavigate();
 
-  // Fetch product details if editing an existing product
   useEffect(() => {
     if (productId) {
       const fetchProduct = async () => {
         try {
           setLoading(true);
           const response = await ProductService.getProductById(productId);
-          setProduct(response.data);
+          // Ensure status is always set (fallback to 'not_set')
+          setProduct({
+            ...response.data,
+            status: response.data.status || 'not_set',
+          });
         } catch (err: any) {
           setError(err.message || 'Error fetching product details');
         } finally {
           setLoading(false);
         }
       };
-
       fetchProduct();
+    } else {
+      // Reset form when adding new product
+      setProduct({
+        name: '',
+        description: '',
+        price: 0,
+        category: '',
+        stock: 0,
+        status: 'not_set',
+      });
     }
   }, [productId]);
 
-  // Handle form submission
   const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
     setError('');
@@ -60,15 +74,11 @@ const ProductForm: React.FC<ProductFormProps> = ({ isModal, productId, onClose, 
     try {
       setLoading(true);
       if (productId) {
-        // Edit product
         await ProductService.updateProduct(productId, product);
       } else {
-        // Add new product
         await ProductService.addProduct(product);
       }
-
-      onSuccess(); // Refresh the list after successful action
-      onClose(); // Close modal
+      onSuccess(); // Closes modal and refreshes product list
     } catch (err: any) {
       setError(err.message || 'Failed to save product');
     } finally {
@@ -76,12 +86,13 @@ const ProductForm: React.FC<ProductFormProps> = ({ isModal, productId, onClose, 
     }
   };
 
-  // Handle form field changes
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
+  ) => {
     const { name, value } = e.target;
-    setProduct(prev => ({
+    setProduct((prev) => ({
       ...prev,
-      [name]: value
+      [name]: name === 'price' || name === 'stock' ? Number(value) : value,
     }));
   };
 
@@ -90,7 +101,7 @@ const ProductForm: React.FC<ProductFormProps> = ({ isModal, productId, onClose, 
       <h2 className="text-2xl font-bold mb-6">
         {productId ? 'Edit Product' : 'Add New Product'}
       </h2>
-      
+
       {error && (
         <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
           {error}
@@ -99,71 +110,87 @@ const ProductForm: React.FC<ProductFormProps> = ({ isModal, productId, onClose, 
 
       <form onSubmit={handleSubmit} className="space-y-4">
         <div>
-          <label className="block text-gray-700 text-sm font-bold mb-2">
-            Name
-          </label>
+          <label className="block text-gray-700 text-sm font-bold mb-2">Name</label>
           <input
             type="text"
             name="name"
             value={product.name}
             onChange={handleChange}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             required
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
           />
         </div>
 
         <div>
-          <label className="block text-gray-700 text-sm font-bold mb-2">
-            Description
-          </label>
+          <label className="block text-gray-700 text-sm font-bold mb-2">Description</label>
           <textarea
             name="description"
             value={product.description}
             onChange={handleChange}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
           />
         </div>
 
         <div>
-          <label className="block text-gray-700 text-sm font-bold mb-2">
-            Price
-          </label>
+          <label className="block text-gray-700 text-sm font-bold mb-2">Price</label>
           <input
             type="number"
             name="price"
             value={product.price}
             onChange={handleChange}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             required
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
+            min={0}
           />
         </div>
 
         <div>
-          <label className="block text-gray-700 text-sm font-bold mb-2">
-            Category
-          </label>
-          <input
-            type="text"
+          <label className="block text-gray-700 text-sm font-bold mb-2">Category</label>
+          <select
             name="category"
             value={product.category}
             onChange={handleChange}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             required
-          />
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
+          >
+            <option value="">Select a category</option>
+            {categoryOptions.map((cat) => (
+              <option key={cat} value={cat}>
+                {cat}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div>
-          <label className="block text-gray-700 text-sm font-bold mb-2">
-            Stock
-          </label>
+          <label className="block text-gray-700 text-sm font-bold mb-2">Stock</label>
           <input
             type="number"
             name="stock"
             value={product.stock}
             onChange={handleChange}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
             required
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
+            min={0}
           />
+        </div>
+
+        <div>
+          <label className="block text-gray-700 text-sm font-bold mb-2">Status</label>
+          <select
+            name="status"
+            value={product.status}
+            onChange={handleChange}
+            required
+            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
+          >
+            <option value="">Select status</option>
+            {statusOptions.map((status) => (
+              <option key={status} value={status}>
+                {status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className="flex justify-end space-x-3">

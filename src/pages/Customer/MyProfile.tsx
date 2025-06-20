@@ -61,7 +61,7 @@ export default function MyProfile() {
     e.preventDefault();
     setError('');
     setSuccess('');
-    
+
     try {
       await API.put(`/api/userManagement/customers/${user?.id}/profile`, profileData);
       setSuccess('Profile updated successfully');
@@ -223,4 +223,4 @@ export default function MyProfile() {
       </form>
     </div>
   );
-} 
+}
