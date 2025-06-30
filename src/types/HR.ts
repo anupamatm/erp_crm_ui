@@ -1,19 +1,50 @@
+export interface Address {
+  street: string;
+  city: string;
+  state: string;
+  country: string;
+  zipCode: string;
+}
+
+export interface EmergencyContact {
+  name: string;
+  relation: string;
+  phone: string;
+}
+
+export interface Document {
+  name: string;
+  url: string;
+  type: string;
+  uploadDate: string;
+}
+
 export interface Employee {
-    id: string;
-    employeeId: string;
-    firstName: string;
-    lastName: string;
+  id?: string;
+  _id?: string;
+  employeeId?: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  position: string;
+  department: string;
+  salary: number;
+  hireDate?: string;
+  dateOfJoining?: string | Date;
+  status: 'active' | 'inactive' | 'terminated' | 'on-leave';
+  avatar?: string;
+  manager?: string;
+  location: string;
+  address: Address;
+  emergencyContact: EmergencyContact;
+  documents?: Document[];
+  user?: {
+    _id: string;
     email: string;
-    phone: string;
-    position: string;
-    department: string;
-    salary: number;
-    hireDate: string;
-    status: 'active' | 'inactive' | 'terminated';
-    avatar?: string;
-    manager?: string;
-    location: string;
-  }
+    defaultPassword?: string;
+  };
+}
   
   export interface Department {
     id: string;

@@ -1,11 +1,17 @@
 import React, { useState, useEffect } from 'react';
 import { X, User, Mail, Phone, Building2, DollarSign, Calendar, Users, Plus, Loader2 } from 'lucide-react';
-import { Employee } from '../../types/HR';
+import { Employee, Address, EmergencyContact, Document } from '../../types/HR';
+
+type EmployeeFormData = Omit<Employee, 'id' | '_id' | 'user' | 'employeeId' | 'hireDate' | 'avatar' | 'documents'> & {
+  dateOfJoining?: string | Date;
+  address: Address;
+  emergencyContact: EmergencyContact;
+};
 
 interface AddEmployeeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  onSubmit: (employeeData: Omit<Employee, 'id'>) => void;
+  onSubmit: (employeeData: Omit<Employee, 'id' | '_id' | 'user'> & { dateOfJoining?: string | Date }) => Promise<void>;
   departments: any[];
   employees: any[];
   isLoading: boolean;
@@ -19,7 +25,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   employees,
   isLoading
 }) => {
-  const [formData, setFormData] = useState<Omit<Employee, 'id'>>({
+  const [formData, setFormData] = useState<EmployeeFormData>({
     firstName: '',
     lastName: '',
     email: '',
@@ -29,6 +35,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     salary: 0,
     dateOfJoining: new Date().toISOString().split('T')[0],
     status: 'active',
+    location: '',
     address: {
       street: '',
       city: '',
@@ -40,8 +47,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
       name: '',
       relation: '',
       phone: ''
-    },
-    documents: []
+    }
   });
 
   const [errors, setErrors] = useState<Record<string, string>>({});
@@ -60,6 +66,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
         salary: 0,
         dateOfJoining: new Date().toISOString().split('T')[0],
         status: 'active',
+        location: '',
         address: {
           street: '',
           city: '',
@@ -71,8 +78,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
           name: '',
           relation: '',
           phone: ''
-        },
-        documents: []
+        }
       });
       setErrors({});
     }
@@ -116,13 +122,34 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     if (!validateForm()) return;
 
     try {
-      await onSubmit({
+      // Create the employee data object with required fields
+      const employeeData = {
         ...formData,
+        firstName: formData.firstName.trim(),
+        lastName: formData.lastName.trim(),
+        email: formData.email.trim(),
+        phone: formData.phone.trim(),
+        position: formData.position.trim(),
+        department: formData.department,
         salary: Number(formData.salary),
-        dateOfJoining: formData.dateOfJoining,
-        status: formData.status as 'active' | 'inactive' | 'on-leave' | 'terminated'
-      });
-      onClose();
+        dateOfJoining: formData.dateOfJoining || new Date().toISOString(),
+        status: 'active' as const,
+        location: formData.location,
+        address: {
+          street: formData.address.street.trim(),
+          city: formData.address.city.trim(),
+          state: formData.address.state.trim(),
+          country: formData.address.country.trim(),
+          zipCode: formData.address.zipCode.trim()
+        },
+        emergencyContact: {
+          name: formData.emergencyContact.name.trim(),
+          relation: formData.emergencyContact.relation.trim(),
+          phone: formData.emergencyContact.phone.trim()
+        }
+      };
+      
+      await onSubmit(employeeData);
     } catch (error) {
       console.error('Error in form submission:', error);
       // Error is handled by the parent component
@@ -493,9 +520,6 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                         step="1000"
                       />
                     </div>
-                    {errors.salary && (
-                      <p className="text-red-500 text-xs mt-1">{errors.salary}</p>
-                    )}
                   </div>
 
                   <div>
@@ -507,7 +531,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                       <input
                         type="date"
                         name="dateOfJoining"
-                        value={formData.dateOfJoining}
+                        value={formData.dateOfJoining instanceof Date ? formData.dateOfJoining.toISOString().split('T')[0] : formData.dateOfJoining}
                         onChange={handleInputChange}
                         className={`w-full pl-10 pr-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-colors ${
                           errors.dateOfJoining ? 'border-red-300' : 'border-gray-300'

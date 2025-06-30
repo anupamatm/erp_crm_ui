@@ -1,6 +1,6 @@
 // src/AppRoutes.tsx
-import React, { useState } from 'react';
-import { Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import React from 'react';
+import { Routes, Route, Navigate } from 'react-router-dom';
 import { ROLES } from './constants/navigation';
 import ProtectedRoute from './components/ProtectedRoute';
 import CustomerLayout from './pages/Customer/CustomerLayout';
@@ -67,8 +67,11 @@ import LeaveManagement from './pages/HR/LeaveManagement';
 import Payroll from './pages/HR/Payroll';
 import Performance from './pages/HR/Performance';
 
-
-
+// Employee Components
+import EmployeeLayout from './components/Employee/EmployeeLayout';
+import EmployeeDashboard from './pages/Employee/Dashboard';
+import EmployeeProfile from './pages/Employee/Profile';
+import EmployeeAttendance from './pages/Employee/AttendanceHistory';
 
 export default function AppRoutes() {
 
@@ -81,7 +84,7 @@ export default function AppRoutes() {
       <Route path="/unauthorized" element={<Unauthorized />} />
 
       {/* Protected Routes */}
-      <Route element={<ProtectedRoute roles={['admin', 'finance', 'sales_manager', 'sales_exec', 'customer', 'hr']} />}>
+      <Route element={<ProtectedRoute roles={[ROLES.ADMIN, ROLES.FINANCE, ROLES.SALES_MANAGER, ROLES.SALES_EXEC, ROLES.CUSTOMER, ROLES.HR, ROLES.EMPLOYEE]} />}>
         <Route path="/" element={<ProtectedRouteLayout />}>
           {/* Redirect to role-specific dashboard */}
           <Route index element={<RedirectByRole />} />
@@ -235,6 +238,24 @@ export default function AppRoutes() {
           {/* Fallback route */}
           <Route path="*" element={<Navigate to="/" replace />} />
         </Route>
+      </Route>
+
+      {/* Employee Portal Routes */}
+      <Route
+        path="/employee"
+        element={
+          <ProtectedRoute roles={[ROLES.EMPLOYEE]}>
+            <EmployeeLayout />
+          </ProtectedRoute>
+        }
+      >
+        <Route index element={<EmployeeDashboard />} />
+        <Route path="dashboard" element={<EmployeeDashboard />} />
+        <Route path="profile" element={<EmployeeProfile />} />
+        <Route path="attendance" element={<EmployeeAttendance />} />
+        <Route path="leave" element={<div>Leave Management</div>} />
+        <Route path="documents" element={<div>Documents</div>} />
+        <Route path="*" element={<Navigate to="/employee/dashboard" replace />} />
       </Route>
 
       {/* Fallback to login for any unmatched route */}

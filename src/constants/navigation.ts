@@ -25,7 +25,8 @@ export const ROLES = {
   SALES_MANAGER: 'sales_manager',
   SALES_EXEC: 'sales_exec',
   CUSTOMER: 'customer',
-  HR: 'hr'
+  HR: 'hr',
+  EMPLOYEE: 'employee'
 };
 
 // Helper function to create navigation items
@@ -92,6 +93,14 @@ export const hrNavigation: NavigationItem[] = [
   createNavItem('Recruitment', '/hr/recruitment', Plus, [ROLES.ADMIN, ROLES.HR]),
 ];
 
+// Employee Navigation
+export const employeeNavigation: NavigationItem[] = [
+  createNavItem('Dashboard', '/employee/dashboard', LayoutDashboard, [ROLES.EMPLOYEE]),
+  createNavItem('My Profile', '/employee/profile', User, [ROLES.EMPLOYEE]),
+  createNavItem('Attendance', '/employee/attendance', Calendar, [ROLES.EMPLOYEE]),
+  createNavItem('Documents', '/employee/documents', FileText, [ROLES.EMPLOYEE])
+];
+
 // Navigation map for ProtectedRouteLayout
 const navigationMap: Record<string, NavigationItem[]> = {
   [ROLES.ADMIN]: adminNavigation, // Admin sees both admin and finance nav
@@ -100,9 +109,26 @@ const navigationMap: Record<string, NavigationItem[]> = {
   [ROLES.SALES_EXEC]: salesNavigation,
   [ROLES.CUSTOMER]: customerNavigation,
   [ROLES.HR]: hrNavigation,
+  [ROLES.EMPLOYEE]: employeeNavigation,
 };
 
 export const getNavigationForRole = (role: string): NavigationItem[] => {
-  // Return the combined navigation for the role
-  return navigationMap[role] || [];
+  switch (role) {
+    case ROLES.ADMIN:
+      // Only return main admin navigation items
+      return adminNavigation;
+    case ROLES.FINANCE:
+      return financeNavigation;
+    case ROLES.SALES_MANAGER:
+    case ROLES.SALES_EXEC:
+      return salesNavigation;
+    case ROLES.HR:
+      return hrNavigation;
+    case ROLES.EMPLOYEE:
+      return employeeNavigation;
+    case ROLES.CUSTOMER:
+      return customerNavigation;
+    default:
+      return [];
+  }
 };
