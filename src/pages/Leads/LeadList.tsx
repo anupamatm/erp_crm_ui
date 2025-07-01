@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
-import LeadService from '@/services/leadService';
-import { Lead } from '@/types/Lead';
+import LeadService from '../../services/leadService';
+import { Lead } from '../../types/Lead';
 import { Link } from 'react-router-dom';
 
 const LeadList = () => {
