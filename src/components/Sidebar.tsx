@@ -5,7 +5,7 @@ import { useAuth } from '../lib/auth';
 interface NavigationItem {
   name: string;
   icon: React.ComponentType;
-  path: string;
+  href: string;
   roles: string[];
 }
 
@@ -17,40 +17,39 @@ const Sidebar: React.FC<{ navigation: NavigationItem[] }> = ({ navigation }) => 
   };
 
   return (
-    <nav className="w-64 bg-gray-800 text-white relative">
+    <nav className="w-64 bg-gray-800 text-white sticky top-0 h-screen">
       <div className="p-4">
         <h1 className="text-xl font-bold text-white">ERP CRM</h1>
       </div>
 
       <div className="space-y-1 px-2 py-4">
-      {navigation
-  .filter(item => item.roles.includes(user?.role || ''))
-  .map((item) => {
-    const fullPath =
-      user?.role === 'customer'
-        ? `/customer${item.path === '/' ? '' : item.path}`
-        : item.path;
+        {navigation
+          .filter(item => (item.roles || []).includes(user?.role || ''))
+          .map((item) => {
+            // Use the href as is since navigation items already have correct paths
+            const fullPath = item.href;
 
-    const isExact = fullPath === '/' || fullPath === `/customer`;
+            // Only use end prop for exact matches (dashboard or customer dashboard)
+            const isExact = fullPath === '/dashboard' || fullPath === '/customer';
 
-    return (
-      <NavLink
-        key={item.path}
-        to={item.href}
-        {...(isExact ? { end: true } : {})} // 👈 end only for exact matches
-        className={({ isActive }) =>
-          `flex items-center px-4 py-3 rounded-lg transition-colors duration-200 ${
-            isActive
-              ? 'bg-blue-500 text-white'
-              : 'text-white hover:bg-gray-700'
-          }`
-        }
-      >
-        <item.icon className="w-5 h-5 mr-3" />
-        {item.name}
-      </NavLink>
-    );
-  })}
+            return (
+              <NavLink
+                key={item.href}
+                to={fullPath}
+                {...(isExact ? { end: true } : {})}
+                className={({ isActive }) =>
+                  `flex items-center px-4 py-3 rounded-lg transition-colors duration-200 ${
+                    isActive
+                      ? 'bg-blue-500 text-white'
+                      : 'text-white hover:bg-gray-700'
+                  }`
+                }
+              >
+                <item.icon className="w-5 h-5 mr-3" />
+                {item.name}
+              </NavLink>
+            );
+          })}
 
       </div>
 

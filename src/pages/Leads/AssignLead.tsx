@@ -34,8 +34,8 @@ const AssignLead = () => {
 
   const fetchUsers = async () => {
     try {
-      const data = await userApi.getUsers();
-      setUsers(data);
+      const response = await userApi.getUsers();
+      setUsers(Array.isArray(response.data) ? response.data : []);
     } catch (error) {
       console.error('Error fetching users:', error);
       alert('Failed to fetch users');

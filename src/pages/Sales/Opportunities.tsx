@@ -406,7 +406,7 @@ const Opportunities = () => {
                           onClick={() => navigate(`/sales/opportunities/${opp._id}`)}
                         >
                           <div className="text-sm font-medium mb-1">{opp.title}</div>
-                          <div className="text-xs text-gray-500">{opp.customer.name}</div>
+                          <div className="text-xs text-gray-500">{opp.customer?.name || ''}</div>
                           <div className="text-xs font-medium text-gray-900 mt-1">
                             {formatCurrency(opp.value)}
                           </div>
@@ -482,7 +482,7 @@ const Opportunities = () => {
                   {opportunities.map((opportunity) => (
                     <tr key={opportunity._id} className="border-b hover:bg-gray-50">
                       <td className="py-3 px-4">{opportunity.title}</td>
-                      <td className="py-3 px-4">{opportunity.customer.name}</td>
+                      <td className="py-3 px-4">{opportunity.customer?.name || ''}</td>
                       <td className="py-3 px-4">
                         <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStageColor(opportunity.stage)}`}>
                           {opportunity.stage.replace(/-/g, ' ').replace(/\w+/g, (txt) => txt.charAt(0).toUpperCase() + txt.substr(1).toLowerCase())}

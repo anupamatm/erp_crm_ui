@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { API } from '../lib/api';
 import { Pencil, Trash2, ArrowLeft } from 'lucide-react';
 
-interface Customer {
+interface Customer {  
   _id: string;
   name: string;
   email: string;

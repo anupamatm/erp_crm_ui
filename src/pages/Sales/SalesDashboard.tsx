@@ -94,7 +94,22 @@ const Dashboard = () => {
         params: { days: dateRange }
       });
       console.log('Dashboard response:', response.data);
-      setData(response.data);
+      
+      // Use backend fields directly for dynamic dashboard
+      const dashboardData = {
+        summary: response.data.summary || {
+          totalRevenue: 0,
+          totalOrders: 0,
+          averageOrderValue: 0,
+          pendingOrders: 0,
+          activeOpportunities: 0,
+          conversionRate: 0
+        },
+        revenueByMonth: response.data.revenueByMonth || [],
+        opportunitiesByStage: response.data.opportunitiesByStage || [],
+        topProducts: response.data.topProducts || []
+      };
+      setData(dashboardData);
     } catch (err: any) {
       console.error('Dashboard Error:', err);
       const errorMessage = err.response?.data?.error || 

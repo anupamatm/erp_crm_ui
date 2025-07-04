@@ -27,22 +27,27 @@ export default function MyProfile() {
   });
 
   useEffect(() => {
+    console.log("user*********",user);
     const fetchProfile = async () => {
       try {
-        const response = await API.get(`/api/customers/${user?._id}/profile`);
+        const response = await API.get(`/api/userManagement/customers/${user?.id}/profile`);
         setProfileData(response.data);
       } catch (err) {
-        setError('Failed to fetch profile data');
+        if (err.response?.data?.error) {
+          setError(err.response.data.error);
+        } else {
+          setError('Failed to fetch profile data');
+        }
         console.error('Error fetching profile:', err);
       } finally {
         setLoading(false);
       }
     };
 
-    if (user?._id) {
+    if (user?.id) {
       fetchProfile();
     }
-  }, [user?._id]);
+  }, [user?.id]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const { name, value } = e.target;
@@ -56,13 +61,17 @@ export default function MyProfile() {
     e.preventDefault();
     setError('');
     setSuccess('');
-    
+
     try {
-      await API.put(`/api/customers/${user?._id}/profile`, profileData);
+      await API.put(`/api/userManagement/customers/${user?.id}/profile`, profileData);
       setSuccess('Profile updated successfully');
       setIsEditing(false);
     } catch (err) {
-      setError('Failed to update profile');
+      if (err.response?.data?.error) {
+        setError(err.response.data.error);
+      } else {
+        setError('Failed to update profile');
+      }
       console.error('Error updating profile:', err);
     }
   };
@@ -214,4 +223,4 @@ export default function MyProfile() {
       </form>
     </div>
   );
-} 
+}

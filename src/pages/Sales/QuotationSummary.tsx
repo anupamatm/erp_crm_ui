@@ -12,7 +12,9 @@ type Quotation = {
   items?: QuotationItem[];
 };
 
-const QuotationSummary = ({ quotations }: { quotations: Quotation[] }) => {
+const QuotationSummary = ({ quotations = [] }: { quotations?: Quotation[] }) => {
+  console.log('QuotationSummary props:', quotations);
+
   // Helper to get total safely, fallback to sum of items or 0
   const getTotal = (quotation: Quotation): number => {
     if (typeof quotation.total === 'number' && !isNaN(quotation.total)) {
@@ -31,7 +33,6 @@ const QuotationSummary = ({ quotations }: { quotations: Quotation[] }) => {
     if (quotation.status !== 'paid') acc += getTotal(quotation);
     return acc;
   }, 0);
-  console.log(totalOutstanding)
 
   const overdueAmount = quotations.reduce((acc, quotation) => {
     if (quotation.status === 'overdue') acc += getTotal(quotation);
@@ -86,4 +87,3 @@ const QuotationSummary = ({ quotations }: { quotations: Quotation[] }) => {
 };
 
 export default QuotationSummary;
-

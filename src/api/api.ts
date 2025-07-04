@@ -1,6 +1,6 @@
 // src/api.ts or similar (shared Axios instance)
 import axios from 'axios';
-import { useAuth } from '../lib/auth';
+// import { useAuth } from '../lib/auth';
 
 const API = axios.create({
   baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5007',

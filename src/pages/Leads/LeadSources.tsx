@@ -98,20 +98,27 @@ const LeadSources = () => {
     return colors[status] || 'bg-gray-100 text-gray-800';
   };
 
+  const filteredSources = sources.filter(source =>
+    source.source.toLowerCase().includes(searchText.toLowerCase()) &&
+    (selectedFilter === '' || source.source === selectedFilter)
+  );
+
+  const displaySources = selectedFilter
+    ? sources.filter(s => s.source === selectedFilter)
+    : ['website', 'referral', 'trade_show', 'cold_call'].map(src => sources.find(s => s.source === src)).filter(Boolean);
+
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold">Lead Sources</h1>
         <div className="flex items-center space-x-4">
-          <div className="relative">
-            <input
-              type="text"
-              placeholder="Search sources..."
-              value={searchText}
-              onChange={handleSearch}
-              className="w-64 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
-            />
-          </div>
+          <input
+            type="text"
+            placeholder="Search sources..."
+            value={searchText}
+            onChange={handleSearch}
+            className="w-64 px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
           <select
             value={selectedFilter}
             onChange={handleFilter}
@@ -133,6 +140,7 @@ const LeadSources = () => {
         </div>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+          {/* Source Performance Table */}
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200">
               <h2 className="text-lg font-medium text-gray-900">Source Performance</h2>
@@ -141,48 +149,31 @@ const LeadSources = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Source
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Total Leads
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Conversion Rate
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Average Revenue
-                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Source</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Total Leads</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Conversion Rate</th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Average Revenue</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  {sources
-                    .filter((source) =>
-                      source.source.toLowerCase().includes(searchText.toLowerCase())
-                    )
-                    .map((source) => (
-                      <tr key={source.source} className="hover:bg-gray-50">
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          <Link to={`/leads/source/${source.source}`} className="text-blue-600 hover:text-blue-900">
-                            {source.source}
-                          </Link>
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {source.count.toLocaleString()}
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          {source.conversionRate.toFixed(1)}%
-                        </td>
-                        <td className="px-6 py-4 whitespace-nowrap">
-                          ${source.averageRevenue.toFixed(2)}
-                        </td>
-                      </tr>
-                    ))}
+                  {filteredSources.map((source) => (
+                    <tr key={source.source} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <Link to={`/leads/source/${source.source}`} className="text-blue-600 hover:text-blue-900">
+                          {source.source}
+                        </Link>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap">{source.count}</td>
+                      <td className="px-6 py-4 whitespace-nowrap">{source.conversionRate.toFixed(1)}%</td>
+                      <td className="px-6 py-4 whitespace-nowrap">${source.averageRevenue.toFixed(2)}</td>
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>
           </div>
 
+          {/* Status Breakdown Table */}
           <div className="bg-white rounded-lg shadow overflow-hidden">
             <div className="px-6 py-4 border-b border-gray-200">
               <h2 className="text-lg font-medium text-gray-900">Status Breakdown</h2>
@@ -191,119 +182,29 @@ const LeadSources = () => {
               <table className="min-w-full divide-y divide-gray-200">
                 <thead className="bg-gray-50">
                   <tr>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Status
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Website
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Referral
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Trade Show
-                    </th>
-                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                      Cold Call
-                    </th>
+                    <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                    {displaySources.map((s) => (
+                      <th key={s.source} className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        {s.source}
+                      </th>
+                    ))}
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor('new')}`}>
-                        New
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {sources.find(s => s.source === 'website')?.newLeads || 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {sources.find(s => s.source === 'referral')?.newLeads || 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {sources.find(s => s.source === 'trade_show')?.newLeads || 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {sources.find(s => s.source === 'cold_call')?.newLeads || 0}
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor('contacted')}`}>
-                        Contacted
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {sources.find(s => s.source === 'website')?.contactedLeads || 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {sources.find(s => s.source === 'referral')?.contactedLeads || 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {sources.find(s => s.source === 'trade_show')?.contactedLeads || 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {sources.find(s => s.source === 'cold_call')?.contactedLeads || 0}
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor('qualified')}`}>
-                        Qualified
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {sources.find(s => s.source === 'website')?.qualifiedLeads || 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {sources.find(s => s.source === 'referral')?.qualifiedLeads || 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {sources.find(s => s.source === 'trade_show')?.qualifiedLeads || 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {sources.find(s => s.source === 'cold_call')?.qualifiedLeads || 0}
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor('converted')}`}>
-                        Converted
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {sources.find(s => s.source === 'website')?.convertedLeads || 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {sources.find(s => s.source === 'referral')?.convertedLeads || 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {sources.find(s => s.source === 'trade_show')?.convertedLeads || 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {sources.find(s => s.source === 'cold_call')?.convertedLeads || 0}
-                    </td>
-                  </tr>
-                  <tr className="hover:bg-gray-50">
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor('lost')}`}>
-                        Lost
-                      </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {sources.find(s => s.source === 'website')?.lostLeads || 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {sources.find(s => s.source === 'referral')?.lostLeads || 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {sources.find(s => s.source === 'trade_show')?.lostLeads || 0}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap">
-                      {sources.find(s => s.source === 'cold_call')?.lostLeads || 0}
-                    </td>
-                  </tr>
+                  {['newLeads', 'contactedLeads', 'qualifiedLeads', 'convertedLeads', 'lostLeads'].map((statusKey) => (
+                    <tr key={statusKey} className="hover:bg-gray-50">
+                      <td className="px-6 py-4 whitespace-nowrap">
+                        <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(statusKey.replace('Leads', ''))}`}>
+                          {statusKey.replace('Leads', '')[0].toUpperCase() + statusKey.replace('Leads', '').slice(1)}
+                        </span>
+                      </td>
+                      {displaySources.map((s) => (
+                        <td key={s.source} className="px-6 py-4 whitespace-nowrap">
+                          {s[statusKey as keyof SourceStats] as number}
+                        </td>
+                      ))}
+                    </tr>
+                  ))}
                 </tbody>
               </table>
             </div>

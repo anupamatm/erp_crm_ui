@@ -1,6 +1,31 @@
 // src/lib/salesOrderService.ts
 import API from '../api/api';
 
+export interface Address {
+  street: string;
+  city: string;
+  state: string;
+  postalCode: string;
+  country: string;
+}
+
+export interface OrderItem {
+  product: {
+    _id: string;
+    name: string;
+    price: number;
+  };
+  quantity: number;
+  unitPrice: number;
+  discount: number;
+  tax: number;
+  subTotal: number;
+}
+
+export type OrderStatus = 'draft' | 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled';
+export type PaymentStatus = 'pending' | 'paid' | 'partially_paid' | 'overdue' | 'refunded' | 'failed';
+export type PaymentTerms = 'due_on_receipt' | 'net_7' | 'net_15' | 'net_30' | 'net_60';
+
 export interface SalesOrder {
   _id?: string;
   orderNumber: string;
@@ -9,26 +34,24 @@ export interface SalesOrder {
     name: string;
     email: string;
   };
-  items: {
-    product: {
-      _id: string;
-      name: string;
-      price: number;
-    };
-    quantity: number;
-    unitPrice: number;
-    discount: number;
-    tax: number;
-    subTotal: number;
-  }[];
+  items: OrderItem[];
+  billingAddress?: Address;
+  shippingAddress?: Address;
+  notes?: string;
+  deliveryDate?: string;
+  terms?: string;
   subtotal: number;
   discountAmount: number;
   taxAmount: number;
   shippingCost: number;
   totalAmount: number;
-  status: string;
-  createdAt: string;
-  updatedAt: string;
+  status: OrderStatus;
+  paymentStatus: PaymentStatus;
+  paymentTerms: PaymentTerms;
+  createdBy?: string;
+  assignedTo?: string;
+  createdAt?: string;
+  updatedAt?: string;
 }
 
 export class SalesOrderService {
@@ -108,13 +131,15 @@ export class SalesOrderService {
     }
   }
 
-  static async getLastOrder(): Promise<SalesOrder | null> {
-    try {
-      const response = await API.get('/api/sales/orders/last');
-      return response.data;
-    } catch (error) {
-      console.error('Error getting last order:', error);
-      return null;
-    }
+ // In SalesOrderService.ts
+static async getLastOrder() {
+  try {
+    const response = await API.get('/api/sales/orders/last');
+    return response.data;
+  } catch (error) {
+    console.error('Error getting last order:', error);
+    // Return null or a default value instead of throwing
+    return null;
   }
+}
 }

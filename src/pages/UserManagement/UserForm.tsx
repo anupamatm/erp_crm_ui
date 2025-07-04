@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { userApi } from '../../services/userService';
 import { toast } from 'react-toastify';
+import "react-toastify/dist/ReactToastify.css";
 
 const UserForm = () => {
   const [formData, setFormData] = useState({
