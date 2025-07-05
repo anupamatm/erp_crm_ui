@@ -14,7 +14,6 @@ import Unauthorized from './pages/Unauthorized';
 // Main Pages
 import Dashboard from './pages/Dashboard';
 import Customers from './pages/Customers';
-import Products from './pages/Products';
 import SettingsPage from './pages/Settings';
 
 // Customer Pages
@@ -42,14 +41,8 @@ import OrderDetails from './pages/Sales/OrderDetails';
 
 // Finance Pages
 import FinanceLayout from './pages/Finance/FinanceLayout';
-import AccountsList from './pages/Finance/AccountsList';
-import AccountsForm from './pages/Finance/AccountsForm';
-import TransactionsList from './pages/Finance/TransactionsList';
-import TransactionForm from './pages/Finance/TransactionForm';
-import Summary from './pages/Finance/Summary';
-import FinanceReports from './pages/Finance/FinanceReports';
-import Expenses from './pages/Finance/Expenses';
 import FinanceDashboard from './pages/Finance/FinanceDashboard';
+import Expenses from './pages/Finance/Expenses';
 
 // Leads Pages
 import LeadsLayout from './pages/Leads/LeadsLayout';
@@ -81,10 +74,15 @@ import UserList from './pages/UserManagement/UserList';
 import UserForm from './pages/UserManagement/UserForm';
 
 // Product Pages
+import ProductsLayout from './pages/Products/ProductsLayout';
+import ProductsPage from './pages/Products/ProductsPage';
 import ProductDetails from './pages/Products/ProductDetails';
 import ProductForm from './pages/Products/ProductForm';
+import { CategoryList, CategoryForm } from './pages/Products/Categories';
+
+// Finance Pages
 import FReports from './pages/Finance/FReports';
-import FAccounts from './pages/Finance/fAccounts';
+import FAccounts from './pages/Finance/FAccounts';
 import FTransactions from './pages/Finance/FTransactions';
 
 export default function AppRoutes() {
@@ -119,11 +117,17 @@ export default function AppRoutes() {
             <Route path=":id/edit" element={<CustomerForm />} />
           </Route>
           
-          <Route path="products">
-            <Route index element={<Products />} />
-            <Route path="new" element={<ProductForm isModal={false} onClose={() => {}} onSuccess={() => {}} />} />
+          {/* Products Routes with Layout */}
+          <Route path="products" element={<ProductsLayout />}>
+            <Route index element={<ProductsPage />} />
+            <Route path="new" element={<ProductForm />} />
             <Route path=":id" element={<ProductDetails />} />
-            <Route path=":id/edit" element={<ProductForm isModal={false} onClose={() => {}} onSuccess={() => {}} />} />
+            <Route path="edit/:id" element={<ProductForm />} />
+            
+            {/* Nested Category Routes */}
+            <Route path="categories" element={<CategoryList />} />
+            <Route path="categories/new" element={<CategoryForm />} />
+            <Route path="categories/edit/:id" element={<CategoryForm />} />
           </Route>
 
           {/* Finance Routes - Protected for both admin and finance roles */}

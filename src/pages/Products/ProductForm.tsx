@@ -1,215 +1,272 @@
 import React, { useState, useEffect } from 'react';
-import ProductService from '../../services/productService';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Button, Form, Input, InputNumber, Select, message, Card } from 'antd';
+import { ArrowLeftOutlined, SaveOutlined } from '@ant-design/icons';
+import ProductService, { Product } from '../../services/productService';
+import CategoryService from '../../services/categoryService';
 
-const categoryOptions = ['Electronics', 'Furniture', 'Dress', 'Books', 'Groceries'];
-const statusOptions = ['in_stock', 'out_of_stock', 'discontinued', 'not_set'];
+const { Option } = Select;
+const { TextArea } = Input;
 
-interface Product {
-  _id?: string;
-  name: string;
-  description: string;
-  price: number;
-  category: string;
-  stock: number;
-  status: string;
-  imageUrl?: string;
-  createdAt?: string;
-  updatedAt?: string;
-}
+//const categoryOptions = ['Electronics', 'Furniture', 'Clothing', 'Books', 'Groceries', 'Other'];
+const statusOptions: Array<Product['status']> = ['in-stock', 'out-of-stock', 'discontinued'];
 
 interface ProductFormProps {
-  isModal: boolean;
-  productId?: string | null;
-  onClose: () => void;
-  onSuccess: () => void;
+  isModal?: boolean;
+  onClose?: () => void;
+  onSuccess?: () => void;
 }
 
-const ProductForm: React.FC<ProductFormProps> = ({ isModal, productId, onClose, onSuccess }) => {
-  const [product, setProduct] = useState<Product>({
-    name: '',
-    description: '',
-    price: 0,
-    category: '',
-    stock: 0,
-    status: 'not_set',
-  });
-  const [error, setError] = useState('');
+interface ProductFormValues extends Omit<Product, '_id' | 'createdAt' | 'updatedAt'> {}
+
+const ProductForm: React.FC<ProductFormProps> = ({ 
+  isModal = false,
+  onClose = () => {}, 
+  onSuccess = () => {}
+}) => {
+  const { id: productId } = useParams<{ id?: string }>();
+  const navigate = useNavigate();
+  const [form] = Form.useForm();
+  
   const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
+  const [categories, setCategories] = useState<Array<{_id: string, name: string}>>([]);
+  const [categoriesLoading, setCategoriesLoading] = useState(false);
+
 
   useEffect(() => {
-    if (productId) {
-      const fetchProduct = async () => {
-        try {
-          setLoading(true);
-          const response = await ProductService.getProductById(productId);
-          // Ensure status is always set (fallback to 'not_set')
-          setProduct({
-            ...response.data,
-            status: response.data.status || 'not_set',
-          });
-        } catch (err: any) {
-          setError(err.message || 'Error fetching product details');
-        } finally {
-          setLoading(false);
-        }
-      };
-      fetchProduct();
-    } else {
-      // Reset form when adding new product
-      setProduct({
-        name: '',
-        description: '',
-        price: 0,
-        category: '',
-        stock: 0,
-        status: 'not_set',
-      });
-    }
-  }, [productId]);
-
-  const handleSubmit = async (event: React.FormEvent) => {
-    event.preventDefault();
-    setError('');
-
-    try {
-      setLoading(true);
-      if (productId) {
-        await ProductService.updateProduct(productId, product);
-      } else {
-        await ProductService.addProduct(product);
+    const fetchCategories = async () => {
+      try {
+        setCategoriesLoading(true);
+        const response = await CategoryService.getCategories(); // Create this service if it doesn't exist
+        setCategories(response.data);
+      } catch (error) {
+        console.error('Error fetching categories:', error);
+        message.error('Failed to load categories');
+      } finally {
+        setCategoriesLoading(false);
       }
-      onSuccess(); // Closes modal and refreshes product list
+    };
+
+
+
+    const fetchProduct = async () => {
+      if (!productId) {
+        form.resetFields();
+        return;
+      }
+
+      try {
+        setLoading(true);
+        const response = await ProductService.getProductById(productId);
+        
+        form.setFieldsValue({
+          name: response.data.name || '',
+          description: response.data.description || '',
+          price: response.data.price || 0,
+          category: response.data.category || '',
+          stock: response.data.stock || 0,
+          status: response.data.status || 'available',
+          imageUrl: response.data.imageUrl || ''
+        });
+      } catch (err: any) {
+        console.error('Error fetching product:', err);
+        message.error(err.message || 'Error loading product details');
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    fetchCategories();
+    fetchProduct();
+  }, [productId, form]);
+
+  const onFinish = async (values: Omit<Product, '_id' | 'createdAt' | 'updatedAt'>) => {
+    try {
+      setSubmitting(true);
+      
+      if (productId) {
+        await ProductService.updateProduct(productId, values);
+        message.success('Product updated successfully');
+      } else {
+        await ProductService.addProduct(values);
+        message.success('Product created successfully');
+      }
+      
+      onSuccess();
+      
+      if (isModal) {
+        onClose();
+      } else {
+        navigate('/products');
+      }
     } catch (err: any) {
-      setError(err.message || 'Failed to save product');
+      console.error('Error saving product:', err);
+      const errorMessage = err.response?.data?.message || err.message || 'Failed to save product';
+      message.error(typeof errorMessage === 'string' ? errorMessage : 'Failed to save product');
     } finally {
-      setLoading(false);
+      setSubmitting(false);
     }
   };
 
-  const handleChange = (
-    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>
-  ) => {
-    const { name, value } = e.target;
-    setProduct((prev) => ({
-      ...prev,
-      [name]: name === 'price' || name === 'stock' ? Number(value) : value,
-    }));
+  const onFinishFailed = (errorInfo: any) => {
+    console.log('Form validation failed:', errorInfo);
+    message.error('Please fill in all required fields');
   };
 
   return (
-    <div className="p-6">
-      <h2 className="text-2xl font-bold mb-6">
-        {productId ? 'Edit Product' : 'Add New Product'}
-      </h2>
+    <div className="p-4">
+      <Card 
+        title={
+          <div className="flex items-center">
+            {!isModal && (
+              <Button 
+                type="text" 
+                icon={<ArrowLeftOutlined />} 
+                onClick={() => navigate('/products')}
+                className="mr-2"
+              />
+            )}
+            <span>{productId ? 'Edit Product' : 'Add New Product'}</span>
+          </div>
+        }
+        className="shadow-md"
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={onFinish}
+          onFinishFailed={onFinishFailed}
+          initialValues={{
+            status: 'in-stock',
+            price: 0,
+            stock: 0
+          }}
+          disabled={loading}
+        >
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <div className="space-y-4">
+              <Form.Item
+                label="Product Name"
+                name="name"
+                rules={[{ required: true, message: 'Please enter product name' }]}
+              >
+                <Input placeholder="Enter product name" size="large" />
+              </Form.Item>
 
-      {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
-          {error}
-        </div>
-      )}
+              <Form.Item
+                label="Description"
+                name="description"
+              >
+                <TextArea rows={4} placeholder="Enter product description" />
+              </Form.Item>
 
-      <form onSubmit={handleSubmit} className="space-y-4">
-        <div>
-          <label className="block text-gray-700 text-sm font-bold mb-2">Name</label>
-          <input
-            type="text"
-            name="name"
-            value={product.name}
-            onChange={handleChange}
-            required
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
-          />
-        </div>
+              <Form.Item
+                label="Image URL"
+                name="imageUrl"
+                rules={[{ 
+                  type: 'url', 
+                  message: 'Please enter a valid URL',
+                  warningOnly: true 
+                }]}
+              >
+                <Input placeholder="https://example.com/image.jpg" />
+              </Form.Item>
+            </div>
 
-        <div>
-          <label className="block text-gray-700 text-sm font-bold mb-2">Description</label>
-          <textarea
-            name="description"
-            value={product.description}
-            onChange={handleChange}
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
-          />
-        </div>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <Form.Item
+                  label="Price"
+                  name="price"
+                  rules={[{ 
+                    required: true, 
+                    message: 'Please enter price',
+                    type: 'number',
+                    min: 0,
+                    transform: (value) => Number(value)
+                  }]}
+                >
+                  <InputNumber 
+                    min={0} 
+                    step={0.01} 
+                    className="w-full" 
+                    formatter={value => `$ ${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                    parser={value => value ? value.toString().replace(/\$\s?|(,*)/g, '') : '0'}
+                  />
+                </Form.Item>
 
-        <div>
-          <label className="block text-gray-700 text-sm font-bold mb-2">Price</label>
-          <input
-            type="number"
-            name="price"
-            value={product.price}
-            onChange={handleChange}
-            required
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
-            min={0}
-          />
-        </div>
+                <Form.Item
+                  label="Stock"
+                  name="stock"
+                  rules={[{ 
+                    required: true, 
+                    message: 'Please enter stock quantity',
+                    type: 'number',
+                    min: 0,
+                    transform: (value) => Number(value)
+                  }]}
+                >
+                  <InputNumber min={0} className="w-full" />
+                </Form.Item>
+              </div>
 
-        <div>
-          <label className="block text-gray-700 text-sm font-bold mb-2">Category</label>
-          <select
+              <Form.Item
+            label="Category"
             name="category"
-            value={product.category}
-            onChange={handleChange}
-            required
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
+            rules={[{ required: true, message: 'Please select a category' }]}
           >
-            <option value="">Select a category</option>
-            {categoryOptions.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
-              </option>
-            ))}
-          </select>
-        </div>
+            <Select 
+              placeholder="Select a category" 
+              loading={categoriesLoading}
+              showSearch
+              optionFilterProp="children"
+              filterOption={(input, option) =>
+                (option?.children as string).toLowerCase().includes(input.toLowerCase())
+              }
+            >
+              {categories.map(category => (
+                <Option key={category._id} value={category._id}>
+                  {category.name}
+                </Option>
+              ))}
+            </Select>
+          </Form.Item>
 
-        <div>
-          <label className="block text-gray-700 text-sm font-bold mb-2">Stock</label>
-          <input
-            type="number"
-            name="stock"
-            value={product.stock}
-            onChange={handleChange}
-            required
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
-            min={0}
-          />
-        </div>
+              <Form.Item
+                label="Status"
+                name="status"
+                rules={[{ required: true, message: 'Please select status' }]}
+              >
+                <Select placeholder="Select status" size="large">
+                  {statusOptions.map(status => (
+                    <Option key={status} value={status}>
+                      {status.charAt(0).toUpperCase() + status.slice(1).replace('-', ' ')}
+                    </Option>
+                  ))}
+                </Select>
+              </Form.Item>
+            </div>
+          </div>
 
-        <div>
-          <label className="block text-gray-700 text-sm font-bold mb-2">Status</label>
-          <select
-            name="status"
-            value={product.status}
-            onChange={handleChange}
-            required
-            className="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700"
-          >
-            <option value="">Select status</option>
-            {statusOptions.map((status) => (
-              <option key={status} value={status}>
-                {status.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        <div className="flex justify-end space-x-3">
-          <button
-            type="button"
-            onClick={onClose}
-            className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-4 rounded"
-          >
-            Cancel
-          </button>
-          <button
-            type="submit"
-            disabled={loading}
-            className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded"
-          >
-            {loading ? 'Saving...' : productId ? 'Update' : 'Create'}
-          </button>
-        </div>
-      </form>
+          <div className="flex justify-end space-x-4 mt-8">
+            <Button 
+              onClick={isModal ? onClose : () => navigate('/products')}
+              disabled={submitting}
+            >
+              Cancel
+            </Button>
+            <Button 
+              type="primary" 
+              htmlType="submit"
+              icon={<SaveOutlined />}
+              loading={submitting}
+            >
+              {productId ? 'Update Product' : 'Create Product'}
+            </Button>
+          </div>
+        </Form>
+      </Card>
     </div>
   );
 };

@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
-import { PlusOutlined, DownloadOutlined, ReloadOutlined } from '@ant-design/icons';
+import { PlusOutlined, DownloadOutlined, ReloadOutlined, SearchOutlined, MailOutlined } from '@ant-design/icons';
 import { useNavigate } from 'react-router-dom';
 import { Button, Table, Tag, Card, Input, Select, Space, Typography, Statistic, message } from 'antd';
-import { SearchOutlined } from '@ant-design/icons';
 import api from '../../api/api';
 
 const { Title } = Typography;
@@ -10,6 +9,7 @@ const { Option } = Select;
 
 interface Invoice {
   _id: string;
+  id?: string; // Optional for backward compatibility
   invoiceNumber: string;
   customer: {
     name: string;
@@ -29,75 +29,161 @@ const Invoices = () => {
   const [searchText, setSearchText] = useState('');
   const [statusFilter, setStatusFilter] = useState<string>('all');
   
-// Summary card values
-const [summary, setSummary] = useState({
-  totalOutstanding: 0,
-  overdue: 0,
-  dueIn7Days: 0,
-  paidLast30Days: 0
-});
-
-const calculateSummary = (invoices: Invoice[]) => {
-  const today = new Date();
-  const sevenDaysFromNow = new Date();
-  sevenDaysFromNow.setDate(today.getDate() + 7);
-  const thirtyDaysAgo = new Date();
-  thirtyDaysAgo.setDate(today.getDate() - 30);
-
-  const totalOutstanding = invoices
-    .filter(i => ['sent', 'overdue', 'partially_paid'].includes(i.status))
-    .reduce((sum, invoice) => sum + invoice.totalAmount, 0);
-
-  const overdue = invoices
-    .filter(i => i.status === 'overdue')
-    .reduce((sum, invoice) => sum + invoice.totalAmount, 0);
-
-  const dueIn7Days = invoices
-    .filter(i => {
-      const dueDate = new Date(i.dueDate);
-      return (
-        dueDate > today && 
-        dueDate <= sevenDaysFromNow && 
-        ['sent', 'partially_paid'].includes(i.status)
-      );
-    })
-    .reduce((sum, invoice) => sum + invoice.totalAmount, 0);
-
-  const paidLast30Days = invoices
-    .filter(i => {
-      const paidDate = new Date(i.updatedAt || i.issueDate);
-      return i.status === 'paid' && paidDate >= thirtyDaysAgo;
-    })
-    .reduce((sum, invoice) => sum + invoice.totalAmount, 0);
-
-  setSummary({
-    totalOutstanding,
-    overdue,
-    dueIn7Days,
-    paidLast30Days
+  // Summary card values
+  const [summary, setSummary] = useState({
+    totalOutstanding: 0,
+    overdue: 0,
+    dueIn7Days: 0,
+    paidLast30Days: 0
   });
-};
+
+  const calculateSummary = (invoices: Invoice[]) => {
+    console.log('Calculating summary for invoices:', invoices);
+    
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    
+    const sevenDaysFromNow = new Date(today);
+    sevenDaysFromNow.setDate(today.getDate() + 7);
+    
+    const thirtyDaysAgo = new Date(today);
+    thirtyDaysAgo.setDate(today.getDate() - 30);
+
+    // Helper function to safely parse amount
+    const parseAmount = (amount: any): number => {
+      if (typeof amount === 'number') return amount;
+      if (typeof amount === 'string') {
+        // Remove any non-numeric characters except decimal point
+        const num = parseFloat(amount.replace(/[^0-9.-]+/g, ''));
+        return isNaN(num) ? 0 : num;
+      }
+      return 0;
+    };
+
+    let totalOutstanding = 0;
+    let overdue = 0;
+    let dueIn7Days = 0;
+    let paidLast30Days = 0;
+
+    invoices.forEach(invoice => {
+      const amount = parseAmount(invoice.totalAmount);
+      const dueDate = new Date(invoice.dueDate);
+      dueDate.setHours(0, 0, 0, 0);
+      
+      // Total Outstanding
+      if (['sent', 'overdue', 'partially_paid'].includes(invoice.status)) {
+        totalOutstanding += amount;
+      }
+      
+      // Overdue
+      if (invoice.status === 'overdue') {
+        overdue += amount;
+      }
+      
+      // Due in 7 days
+      if (dueDate > today && dueDate <= sevenDaysFromNow && 
+          ['sent', 'partially_paid'].includes(invoice.status)) {
+        dueIn7Days += amount;
+      }
+      
+      // Paid in last 30 days
+      if (invoice.status === 'paid') {
+        const paidDate = new Date(invoice.updatedAt || invoice.issueDate);
+        paidDate.setHours(0, 0, 0, 0);
+        
+        if (paidDate >= thirtyDaysAgo) {
+          paidLast30Days += amount;
+        }
+      }
+    });
+
+    const result = {
+      totalOutstanding: parseFloat(totalOutstanding.toFixed(2)),
+      overdue: parseFloat(overdue.toFixed(2)),
+      dueIn7Days: parseFloat(dueIn7Days.toFixed(2)),
+      paidLast30Days: parseFloat(paidLast30Days.toFixed(2))
+    };
+
+    console.log('Calculated summary:', result);
+    setSummary(result);
+  };
 
   const fetchInvoices = async () => {
     try {
       setLoading(true);
       console.log('Fetching invoices from API...');
-      const response = await api.get('/api/sales/invoices');
-      console.log('API Response:', response);
+      
+      // Add pagination parameters to get all invoices
+      const response = await api.get('/api/sales/invoices', {
+        params: {
+          page: 1,
+          limit: 100, // Increase limit to get more invoices
+          sort: '-createdAt' // Sort by newest first
+        }
+      });
+      
+      // Debug: Log the complete response structure
+      console.group('API Response Details');
+      console.log('Response status:', response.status);
+      console.log('Response headers:', response.headers);
+      console.log('Response data keys:', Object.keys(response.data));
+      
+      // Check for pagination info
+      if (response.data.pagination) {
+        console.log('Pagination info:', response.data.pagination);
+      }
       
       // Check if response exists and has data
       if (response && response.data) {
-        // The API returns an object with invoices array and pagination info
-        const { invoices, total, pages, currentPage } = response.data;
+        let invoices = [];
+        // Pagination variables (commented out until needed)
+        // let total = 0;
+        // let pages = 1;
+        // let currentPage = 1;
         
+        // Handle different response formats
+        if (Array.isArray(response.data)) {
+          // If response.data is directly an array
+          console.log('Response is an array');
+          invoices = response.data;
+        } else if (response.data.data && Array.isArray(response.data.data)) {
+          // If response has a data property that's an array
+          console.log('Response has data array');
+          invoices = response.data.data;
+          console.log(`Found ${invoices.length} invoices in data array`);
+        } else if (response.data.invoices && Array.isArray(response.data.invoices)) {
+          // If response has an invoices property that's an array
+          console.log('Response has invoices array');
+          invoices = response.data.invoices;
+          console.log(`Found ${invoices.length} invoices in invoices array`);
+        } else if (response.data.docs && Array.isArray(response.data.docs)) {
+          // If using MongoDB/Mongoose style response
+          console.log('Response has docs array (MongoDB style)');
+          invoices = response.data.docs;
+          console.log(`Found ${invoices.length} invoices in docs array`);
+        } else {
+          console.warn('Unexpected response format. Available keys:', Object.keys(response.data));
+        }
+        
+        console.log(`Processing ${invoices.length} invoices`);
+        console.groupEnd(); // Close the API Response Details group
+        
+        if (invoices.length > 0) {
+          console.log('First invoice sample:', JSON.stringify(invoices[0], null, 2));
+          console.log('Invoice amounts:', invoices.map((inv: any) => ({
+            id: inv._id,
+            amount: inv.totalAmount,
+            status: inv.status,
+            dueDate: inv.dueDate
+          })));
+        }
+        
+        // Ensure we have valid data before updating state
         if (Array.isArray(invoices)) {
-          console.log(`Found ${invoices.length} invoices (Page ${currentPage} of ${pages}, Total: ${total})`);
           setInvoices(invoices);
           calculateSummary(invoices);
-          // You can also store pagination info if you want to implement pagination
-          // setPagination({ total, pages, currentPage });          
         } else {
-          console.warn('Invoices data is not an array:', response.data);
+          console.warn('Invalid invoices data format:', invoices);
           setInvoices([]);
           calculateSummary([]);
         }
@@ -108,6 +194,12 @@ const calculateSummary = (invoices: Invoice[]) => {
       }
     } catch (error: any) {
       console.error('Error fetching invoices:', error);
+      console.error('Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        headers: error.response?.headers
+      });
       const errorMessage = error.response?.data?.message || 'Failed to load invoices';
       message.error(errorMessage);
       setInvoices([]);
@@ -123,10 +215,13 @@ const calculateSummary = (invoices: Invoice[]) => {
   
   // Ensure invoices is always an array before filtering
   const filteredInvoices = (Array.isArray(invoices) ? invoices : []).filter((invoice: Invoice) => {
+    if (!invoice) return false;
+    
+    const searchLower = searchText.toLowerCase();
     const matchesSearch = 
-      invoice.invoiceNumber.toLowerCase().includes(searchText.toLowerCase()) ||
-      invoice.customer.name.toLowerCase().includes(searchText.toLowerCase()) ||
-      (invoice.customer.email && invoice.customer.email.toLowerCase().includes(searchText.toLowerCase()));
+      (invoice.invoiceNumber?.toLowerCase().includes(searchLower) ||
+      invoice.customer?.name?.toLowerCase().includes(searchLower) ||
+      (invoice.customer?.email && invoice.customer.email.toLowerCase().includes(searchLower)));
       
     const matchesStatus = statusFilter === 'all' || invoice.status === statusFilter as Invoice['status'];
     
@@ -149,6 +244,29 @@ const calculateSummary = (invoices: Invoice[]) => {
         return 'warning';
       default:
         return 'default';
+    }
+  };
+  
+  const handleDelete = async (id: string) => {
+    if (window.confirm('Are you sure you want to delete this invoice?')) {
+      try {
+        await api.delete(`/api/sales/invoices/${id}`);
+        message.success('Invoice deleted successfully');
+        fetchInvoices();
+      } catch (error) {
+        console.error('Error deleting invoice:', error);
+        message.error('Failed to delete invoice');
+      }
+    }
+  };
+
+  const handleSendEmail = async (invoice: any) => {
+    try {
+      const response = await api.post(`/api/invoices/${invoice._id || invoice.id}/send-email`);
+      message.success(response.data.message || 'Invoice sent successfully');
+    } catch (error: any) {
+      console.error('Error sending invoice email:', error);
+      message.error(error.response?.data?.message || 'Failed to send invoice email');
     }
   };
   
@@ -196,34 +314,32 @@ const calculateSummary = (invoices: Invoice[]) => {
       ),
     },
     {
-     title: 'Actions',
+      title: 'Actions',
       key: 'actions',
+      width: 200,
       render: (_: any, record: Invoice) => (
-        <Space size="middle">
+        <Space size="small">
           <Button 
-            type="link" 
-            danger
-            onClick={async (e) => {
-              e.stopPropagation();
-              if (window.confirm('Are you sure you want to delete this invoice?')) {
-                try {
-                  await api.delete(`/api/sales/invoices/${record._id}`);
-                  message.success('Invoice deleted successfully');
-                  fetchInvoices(); // Refresh the list
-                } catch (error) {
-                  console.error('Error deleting invoice:', error);
-                  message.error('Failed to delete invoice');
-                }
-              }
-            }}
+            type="text" 
+            icon={<MailOutlined style={{ color: '#1890ff' }} />} 
+            onClick={() => handleSendEmail(record)}
+            title="Send via Email"
+            style={{ padding: '4px 8px' }}
+          />
+          <Button 
+            type="text" 
+            onClick={() => navigate(`/sales/invoices/${record._id || record.id || ''}`)}
+            style={{ padding: '4px 8px' }}
           >
-            Delete
+            View
           </Button>
           <Button 
-            type="link" 
-            onClick={() => navigate(`/sales/invoices/${record._id}/edit`)}
+            type="text" 
+            danger 
+            onClick={() => handleDelete(record._id || record.id || '')}
+            style={{ padding: '4px 8px' }}
           >
-            Edit
+            Delete
           </Button>
         </Space>
       ),

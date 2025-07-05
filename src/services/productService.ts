@@ -1,13 +1,24 @@
-// lib/productService.ts
-import API  from '../api/api';  // Assuming you have a generic API utility (e.g., Axios)
+import API from '../api/api';
 
-interface Product {
+export interface Product {
   _id?: string;
   name: string;
   description: string;
   price: number;
   category: string;
+  stock: number;
   status: 'available' | 'out-of-stock' | 'discontinued';
+  imageUrl?: string;
+  sku?: string;
+  brand?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+interface ApiResponse<T> {
+  data: T;
+  message?: string;
+  success: boolean;
 }
 
 class ProductService {
@@ -79,13 +90,26 @@ class ProductService {
     }
   }
 
-  // Fetch a single product by ID
-  static async getProductById(productId: string) {
+  // Get a single product by ID
+  static async getProductById(id: string): Promise<{ data: Product }> {
     try {
-      const response = await API.get(`/api/products/${productId}`);
-      return response.data; // Assuming response contains the product data
+      const response = await API.get(`/api/products/${id}`);
+      
+      // Check if response has data property
+      if (response.data && typeof response.data === 'object') {
+        // If response has a nested data property
+        if (response.data.data && typeof response.data.data === 'object') {
+          return { data: response.data.data as Product };
+        }
+        // If response is the product directly
+        return { data: response.data as Product };
+      }
+      
+      throw new Error('Invalid product data received');
     } catch (error: any) {
-      throw new Error(error.response?.data?.message || 'Error fetching product');
+      console.error('Error fetching product:', error);
+      const errorMessage = error.response?.data?.message || 'Failed to fetch product';
+      throw new Error(typeof errorMessage === 'string' ? errorMessage : 'Failed to fetch product');
     }
   }
 

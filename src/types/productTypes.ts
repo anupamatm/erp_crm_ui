@@ -1,19 +1,19 @@
 export interface Product {
-  _id: string;
+  _id?: string;
   name: string;
-  description?: string;
+  description: string;
   price: number;
-  cost?: number;
-  sku?: string;
-  barcode?: string;
-  quantity: number;
-  category?: string;
-  status?: 'active' | 'inactive' | 'out_of_stock' | 'discontinued';
-  taxRate?: number;
-  unit?: string;
-  minStockLevel?: number;
-  reorderPoint?: number;
+  category: string; // This will be the category ID
+  categoryDetails?: { // Optional populated category data
+    _id: string;
+    name: string;
+    // Add other category fields you need
+  };
+  stock: number;
+  status: 'in_stock' | 'out_of_stock' | 'discontinued' | 'not_set';
   imageUrl?: string;
+  sku?: string;
+  brand?: string;
   createdAt?: string;
   updatedAt?: string;
 }
