@@ -10,29 +10,33 @@ export interface PaginatedResponse<T> {
 }
 
 export const userApi = {
-  // Get all users with pagination
-  getUsers: async (page: number = 1, limit: number = 10, search: string = ''): Promise<PaginatedResponse<any>> => {
+  // Get all users with pagination and optional role filter
+  getUsers: async (
+    page: number = 1, 
+    limit: number = 10, 
+    search: string = '',
+    role?: string
+  ): Promise<PaginatedResponse<any>> => {
     try {
       // Ensure page is at least 1
       const pageNumber = Math.max(1, page);
       
+      const params: any = {
+        page: pageNumber,
+        limit,
+        ...(search && { search }),
+        ...(role && { role })
+      };
+      
       console.log('API Request - Fetching users with params:', { 
         endpoint: '/api/userManagement/users',
-        params: {
-          page: pageNumber,
-          limit,
-          ...(search ? { search } : {})
-        },
+        params,
         timestamp: new Date().toISOString()
       });
       
       // Make sure to pass params as a query string
       const response = await API.get('/api/userManagement/users', {
-        params: {
-          page: pageNumber,
-          limit,
-          ...(search ? { search } : {})
-        },
+        params,
         paramsSerializer: params => {
           return Object.entries(params)
             .filter(([_, value]) => value !== undefined && value !== null)

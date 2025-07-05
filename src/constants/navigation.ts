@@ -60,7 +60,8 @@ export const financeNavigation: NavigationItem[] = [
   createNavItem('Dashboard', '/finance', LayoutDashboard, [ROLES.ADMIN, ROLES.FINANCE]),
   createNavItem('Accounts', '/finance/accounts', Wallet, [ROLES.ADMIN, ROLES.FINANCE]),
   createNavItem('Transactions', '/finance/transactions', CreditCard, [ROLES.ADMIN, ROLES.FINANCE]),
-  createNavItem('Summary', '/finance/summary', BarChart2, [ROLES.ADMIN, ROLES.FINANCE]),
+  createNavItem('Expenses', '/finance/expenses', CreditCard, [ROLES.ADMIN, ROLES.FINANCE]),
+  // createNavItem('Summary', '/finance/summary', BarChart2, [ROLES.ADMIN, ROLES.FINANCE]),
   createNavItem('Reports', '/finance/reports', FileBarChart2, [ROLES.ADMIN, ROLES.FINANCE]),
   
 ];
@@ -68,10 +69,12 @@ export const financeNavigation: NavigationItem[] = [
 // Sales Navigation
 export const salesNavigation: NavigationItem[] = [
   createNavItem('Dashboard', '/sales', LayoutDashboard, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
-
   createNavItem('Leads', '/leads', ClipboardList, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
   createNavItem('Customers', '/customers', User, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
   createNavItem('Products', '/products', Package, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
+  createNavItem('Invoices', '/sales/invoices', FileText, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
+  createNavItem('Quotations', '/sales/quotations', FileCheck, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
+  createNavItem('Orders', '/sales/orders', ShoppingCart, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
 ];
 
 // Customer Navigation
@@ -81,6 +84,7 @@ export const customerNavigation: NavigationItem[] = [
   createNavItem('Invoices', '/customer/invoices', FileText, [ROLES.CUSTOMER]),
   createNavItem('Payments', '/customer/payments', CreditCard, [ROLES.CUSTOMER]),
   createNavItem('Profile', '/customer/profile', User, [ROLES.CUSTOMER]),
+
 ];
 
 // HR Navigation

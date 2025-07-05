@@ -1,20 +1,23 @@
 // src/AppRoutes.tsx
-import React from 'react';
 import { Routes, Route, Navigate } from 'react-router-dom';
 import { ROLES } from './constants/navigation';
 import ProtectedRoute from './components/ProtectedRoute';
 import CustomerLayout from './pages/Customer/CustomerLayout';
 import ProtectedRouteLayout from './components/ProtectedRouteLayout';
 import RedirectByRole from './components/RedirectByRole';
-import Layout from './components/Layout';
+
+// Auth Pages
 import Login from './pages/Login';
 import Signup from './pages/Signup';
 import Unauthorized from './pages/Unauthorized';
+
+// Main Pages
 import Dashboard from './pages/Dashboard';
 import Customers from './pages/Customers';
 import Products from './pages/Products';
-
 import SettingsPage from './pages/Settings';
+
+// Customer Pages
 import CustomerForm from './pages/CustomerForm';
 import CustomerView from './pages/CustomerView';
 import CustomerDashboard from './pages/Customer/CustomerDashboard';
@@ -23,16 +26,21 @@ import MyOrders from './pages/Customer/MyOrders';
 import MyInvoices from './pages/Customer/MyInvoices';
 import PaymentHistory from './pages/Customer/PaymentHistory';
 
+// Sales Pages
 import Orders from './pages/Sales/Orders';
 import Opportunities from './pages/Sales/Opportunities';
 import Invoices from './pages/Sales/Invoices';
 import Reports from './pages/Sales/Reports';
-import ProductForm from './pages/products/ProductForm';
 import SalesOrderForm from './pages/Sales/SalesOrderForm';
-import SimpleOrderForm from './pages/Sales/SimpleOrderForm';
 import OpportunityForm from './pages/Sales/OpportunityForm';
 import SalesLayout from './pages/Sales/SalesLayout';
-import LeadsLayout from './pages/Leads/LeadsLayout';
+import { QuotationList } from './pages/Sales/QuotationList';
+import { QuotationForm } from './pages/Sales/QuotationForm';
+import InvoiceForm from './pages/Sales/InvoiceForm';
+import SalesDashboard from './pages/Sales/SalesDashboard';
+import OrderDetails from './pages/Sales/OrderDetails';
+
+// Finance Pages
 import FinanceLayout from './pages/Finance/FinanceLayout';
 import AccountsList from './pages/Finance/AccountsList';
 import AccountsForm from './pages/Finance/AccountsForm';
@@ -40,24 +48,19 @@ import TransactionsList from './pages/Finance/TransactionsList';
 import TransactionForm from './pages/Finance/TransactionForm';
 import Summary from './pages/Finance/Summary';
 import FinanceReports from './pages/Finance/FinanceReports';
+import Expenses from './pages/Finance/Expenses';
+import FinanceDashboard from './pages/Finance/FinanceDashboard';
 
-
-
-import LeadStats from './pages/Leads/LeadStats';
+// Leads Pages
+import LeadsLayout from './pages/Leads/LeadsLayout';
 import LeadDashboard from './pages/Leads/LeadDashboard';
 import LeadStatus from './pages/Leads/LeadStats';
-import AssignLead from './pages/Leads/AssignLead';
-import LeadSources from './pages/Leads/LeadSources';
 import LeadForm from './pages/Leads/LeadForm';
 import LeadDetail from './pages/Leads/LeadDetail';
-import { useParams } from 'react-router-dom';
-import OrderDetails from './pages/Sales/OrderDetails';
-import UserList from './pages/UserManagement/UserList';
-import UserForm from './pages/UserManagement/UserForm';
-import FinanceDashboard from './pages/Finance/FinanceDashboard';
-import Accounts from './pages/Finance/Accounts';
-import SalesDashboard from './pages/Sales/SalesDashboard';
-import ProductDetails from './pages/Products/ProductDetails';
+import LeadSources from './pages/Leads/LeadSources';
+import AssignLead from './pages/Leads/AssignLead';
+
+// HR Pages
 import HRLayout from './pages/HR/HRLayout';
 import HRDashboard from './pages/HR/HRDashboard';
 import Employees from './pages/HR/Employees';
@@ -73,8 +76,18 @@ import EmployeeDashboard from './pages/Employee/Dashboard';
 import EmployeeProfile from './pages/Employee/Profile';
 import EmployeeAttendance from './pages/Employee/AttendanceHistory';
 
-export default function AppRoutes() {
+// User Management
+import UserList from './pages/UserManagement/UserList';
+import UserForm from './pages/UserManagement/UserForm';
 
+// Product Pages
+import ProductDetails from './pages/Products/ProductDetails';
+import ProductForm from './pages/Products/ProductForm';
+import FReports from './pages/Finance/FReports';
+import FAccounts from './pages/Finance/fAccounts';
+import FTransactions from './pages/Finance/FTransactions';
+
+export default function AppRoutes() {
 
   return (
     <Routes>
@@ -108,9 +121,9 @@ export default function AppRoutes() {
           
           <Route path="products">
             <Route index element={<Products />} />
-            <Route path="new" element={<ProductForm />} />
+            <Route path="new" element={<ProductForm isModal={false} onClose={() => {}} onSuccess={() => {}} />} />
             <Route path=":id" element={<ProductDetails />} />
-            <Route path=":id/edit" element={<ProductForm />} />
+            <Route path=":id/edit" element={<ProductForm isModal={false} onClose={() => {}} onSuccess={() => {}} />} />
           </Route>
 
           {/* Finance Routes - Protected for both admin and finance roles */}
@@ -123,17 +136,22 @@ export default function AppRoutes() {
             <Route element={<FinanceLayout />}>
               <Route index element={<FinanceDashboard />} />
               <Route path="accounts">
-                <Route index element={<AccountsList />} />
+                {/* <Route index element={<AccountsList />} />
                 <Route path="new" element={<AccountsForm />} />
-                <Route path=":id/edit" element={<AccountsForm />} />
+                <Route path=":id/edit" element={<AccountsForm />} /> */}
+                <Route index element={<FAccounts />} />
               </Route>
               <Route path="transactions">
-                <Route index element={<TransactionsList />} />
+                {/* <Route index element={<TransactionsList />} />
                 <Route path="new" element={<TransactionForm />} />
-                <Route path=":id/edit" element={<TransactionForm />} />
+                <Route path=":id/edit" element={<TransactionForm />} /> */}
+                <Route index element={<FTransactions />} />
               </Route>
-              <Route path="summary" element={<Summary />} />
-              <Route path="reports" element={<FinanceReports />} />
+              <Route path="expenses">
+                <Route index element={<Expenses />} />
+                <Route path="reports" element={<FReports />} />
+              </Route>
+              {/* <Route path="summary" element={<Summary />} /> */}
             </Route>
           </Route>
 
@@ -179,25 +197,41 @@ export default function AppRoutes() {
           <Route 
             path="sales" 
             element={
-              <ProtectedRoute roles={[ROLES.ADMIN, ROLES.SALES_MANAGER, ROLES.SALES_EXEC]} />
+              <ProtectedRoute roles={[ROLES.ADMIN, ROLES.SALES_MANAGER, ROLES.SALES_EXEC]}>
+                <SalesLayout />
+              </ProtectedRoute>
             }
           >
-            <Route element={<SalesLayout />}>
-              <Route index element={<SalesDashboard />} />
-              <Route path="orders">
-                <Route index element={<Orders />} />
-                <Route path="new" element={<SalesOrderForm isOpen={true} onClose={() => window.history.back()} />} />
-                <Route path=":id" element={<OrderDetails />} />
-                <Route path=":id/edit" element={<SalesOrderForm isOpen={true} onClose={() => window.history.back()} />} />
-              </Route>
+            <Route index element={<SalesDashboard />} />
+            <Route path="orders">
+              <Route index element={<Orders />} />
+              <Route path="new" element={<SalesOrderForm isOpen={true} onClose={() => window.history.back()} />} />
+              <Route path=":id" element={<OrderDetails />} />
+              <Route path=":id/edit" element={<SalesOrderForm isOpen={true} onClose={() => window.history.back()} />} />
+            </Route>
 
-              <Route path="opportunities">
-                <Route index element={<Opportunities />} />
-                <Route path="new" element={<OpportunityForm />} />
-                <Route path=":id" element={<OpportunityForm />} />
-              </Route>
-              <Route path="invoices" element={<Invoices />} />
-              <Route path="reports" element={<Reports />} />
+            <Route path="opportunities">
+              <Route index element={<Opportunities />} />
+              <Route path="new" element={<OpportunityForm />} />
+              <Route path=":id" element={<OpportunityForm />} />
+            </Route>
+            
+            {/* Invoice Routes */}
+            <Route path="invoices">
+              <Route index element={<Invoices />} />
+              <Route path="new" element={<InvoiceForm />} />
+              <Route path=":id" element={<InvoiceForm />} />
+              <Route path=":id/edit" element={<InvoiceForm />} />
+            </Route>
+            
+            <Route path="reports" element={<Reports />} />
+            
+            {/* Quotation Routes */}
+            <Route path="quotations">
+              <Route index element={<QuotationList />} />
+              <Route path="new" element={<QuotationForm />} />
+              <Route path=":id" element={<QuotationForm />} />
+              <Route path=":id/edit" element={<QuotationForm />} />
             </Route>
           </Route>
 
@@ -253,8 +287,6 @@ export default function AppRoutes() {
         <Route path="dashboard" element={<EmployeeDashboard />} />
         <Route path="profile" element={<EmployeeProfile />} />
         <Route path="attendance" element={<EmployeeAttendance />} />
-        <Route path="leave" element={<div>Leave Management</div>} />
-        <Route path="documents" element={<div>Documents</div>} />
         <Route path="*" element={<Navigate to="/employee/dashboard" replace />} />
       </Route>
 

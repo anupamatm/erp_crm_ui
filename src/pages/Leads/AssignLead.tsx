@@ -3,6 +3,39 @@ import { Link } from 'react-router-dom';
 import LeadService from '../../services/leadService';
 import { Lead } from '../../types/Lead';
 import { userApi } from '../../services/userService';
+import { useAuth } from '../../contexts/AuthContext';
+
+type LeadStatus = 'new' | 'contacted' | 'qualified' | 'unqualified' | 'converted' | 'lost';
+
+interface User {
+  _id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+interface LeadWithAssignedTo extends Omit<Lead, 'assignedTo'> {
+  assignedTo?: {
+    _id: string;
+    name: string;
+    email: string;
+  } | null;
+}
+
+interface User {
+  _id: string;
+  name: string;
+  email: string;
+  role: string;
+}
+
+interface LeadWithAssignedTo extends Omit<Lead, 'assignedTo'> {
+  assignedTo?: {
+    _id: string;
+    name: string;
+    email: string;
+  } | null;
+}
 
 interface User {
   _id: string;
@@ -12,11 +45,12 @@ interface User {
 }
 
 const AssignLead = () => {
-  const [leads, setLeads] = useState<Lead[]>([]);
+  const [leads, setLeads] = useState<LeadWithAssignedTo[]>([]);
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchText, setSearchText] = useState('');
-  const [selectedUser, setSelectedUser] = useState('');
+  const [selectedUser, setSelectedUser] = useState<string>('');
+  const { user } = useAuth();
 
   useEffect(() => {
     Promise.all([fetchLeads(), fetchUsers()]);
@@ -25,7 +59,7 @@ const AssignLead = () => {
   const fetchLeads = async () => {
     try {
       const data = await LeadService.getAllLeads();
-      setLeads(data);
+      setLeads(data as LeadWithAssignedTo[]);
     } catch (error) {
       console.error('Error fetching leads:', error);
       alert('Failed to fetch leads');
@@ -34,8 +68,16 @@ const AssignLead = () => {
 
   const fetchUsers = async () => {
     try {
-      const response = await userApi.getUsers();
-      setUsers(Array.isArray(response.data) ? response.data : []);
+      // If current user is a sales manager, only fetch sales executives
+      const role = user?.role === 'sales_manager' ? 'sales_exec' : undefined;
+      const response = await userApi.getUsers(1, 100, '', role);
+      
+      // Filter out the current user if they're a sales executive
+      const filteredUsers = Array.isArray(response.data) 
+        ? response.data.filter(u => u._id !== user?._id)
+        : [];
+        
+      setUsers(filteredUsers);
     } catch (error) {
       console.error('Error fetching users:', error);
       alert('Failed to fetch users');
@@ -53,25 +95,46 @@ const AssignLead = () => {
   };
 
   const handleAssign = async (leadId: string, userId: string) => {
+    if (!leadId) return;
+    
     try {
-      await LeadService.updateLead(leadId, { assignedTo: userId });
-      alert('Lead assigned successfully');
+      const user = users.find(u => u._id === userId);
+      
+      // Create the update data with proper typing
+      const updateData = user 
+        ? { 
+            assignedTo: {
+              _id: user._id,
+              name: user.name,
+              email: user.email
+            }
+          }
+        : { assignedTo: null };
+      
+      await LeadService.updateLead(leadId, updateData);
       await fetchLeads();
-    } catch (error) {
+      alert('Lead assigned successfully');
+    } catch (error: any) {
       console.error('Error assigning lead:', error);
-      alert('Failed to assign lead');
+      
+      // Check if this is a permission error
+      if (error.message?.includes('permission') || error.message?.includes('authorized')) {
+        alert('You do not have permission to assign leads. Please contact your administrator.');
+      } else {
+        alert(`Failed to assign lead: ${error.message || 'Unknown error'}`);
+      }
     }
   };
 
-  const getStatusColor = (status: string) => {
-    const colors = {
+  const getStatusColor = (status: LeadStatus) => {
+    const statusColors = {
       new: 'bg-blue-100 text-blue-800',
-      contacted: 'bg-yellow-100 text-yellow-800',
-      qualified: 'bg-green-100 text-green-800',
+      contacted: 'bg-purple-100 text-purple-800',
+      qualified: 'bg-yellow-100 text-yellow-800',
       converted: 'bg-green-100 text-green-800',
-      lost: 'bg-red-100 text-red-800'
-    };
-    return colors[status] || 'bg-gray-100 text-gray-800';
+      lost: 'bg-red-100 text-red-800',
+    } as const;
+    return statusColors[status] || 'bg-gray-100 text-gray-800';
   };
 
   return (
@@ -131,9 +194,15 @@ const AssignLead = () => {
             </thead>
             <tbody className="bg-white divide-y divide-gray-200">
               {leads
-                .filter((lead) =>
-                  lead.firstName.toLowerCase().includes(searchText.toLowerCase())
-                )
+                .filter(lead => {
+                  const searchLower = searchText.toLowerCase();
+                  return (
+                    (lead.firstName?.toLowerCase() || '').includes(searchLower) ||
+                    (lead.email?.toLowerCase() || '').includes(searchLower) ||
+                    (lead.company?.toLowerCase() || '').includes(searchLower)
+                  );
+                })
+                .filter(lead => !selectedUser || lead.assignedTo?._id === selectedUser)
                 .map((lead) => (
                   <tr key={lead._id} className="hover:bg-gray-50">
                     <td className="px-6 py-4 whitespace-nowrap">
@@ -153,10 +222,10 @@ const AssignLead = () => {
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
                       {lead.priority}
                     </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium space-x-2">
                       <select
-                        value={lead.assignedTo?._id}
-                        onChange={(e) => handleAssign(lead._id, e.target.value)}
+                        value={lead.assignedTo?._id || ''}
+                        onChange={(e) => handleAssign(lead._id || '', e.target.value)}
                         className="px-4 py-2 border rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
                       >
                         <option value="">Unassign</option>

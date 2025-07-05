@@ -46,15 +46,31 @@ API.interceptors.response.use(
     console.error('Response error:', {
       url: error.config?.url,
       status: error.response?.status,
-      data: error.response?.data
+      data: error.response?.data,
+      code: error.response?.data?.code
     });
 
+    // Only handle 401 errors
     if (error.response?.status === 401) {
-      console.error('Unauthorized access detected');
+      const errorCode = error.response?.data?.code;
       
-      // Clear token and redirect to login
-      localStorage.removeItem('token');
-      window.location.href = '/login';
+      // Handle different types of 401 errors
+      switch(errorCode) {
+        case 'TOKEN_EXPIRED':
+        case 'INVALID_TOKEN':
+        case 'NO_AUTH_HEADER':
+          // These are actual authentication issues - log out and redirect
+          console.error('Authentication required:', errorCode);
+          localStorage.removeItem('token');
+          window.location.href = '/login';
+          break;
+          
+        case 'UNAUTHORIZED':
+        default:
+          // For permission issues, just reject with the error
+          console.error('Permission denied:', error.response?.data?.message || 'Insufficient permissions');
+          break;
+      }
     }
 
     return Promise.reject(error);
