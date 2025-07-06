@@ -1,11 +1,9 @@
 import { 
   LayoutDashboard, Users, User, ShoppingCart, 
-  FileText, BarChart, Settings, Wallet, 
-  CreditCard, ListChecks, BarChart2, PieChart,
-  MessageSquare, Tag, Calendar, Mail, 
-  Bell, HelpCircle, LogOut, Home, 
+  FileText, Settings, Wallet, 
+  CreditCard, Calendar, Home, 
   FileCheck, DollarSign, Package, Briefcase,
-  ClipboardList, TrendingUp, FileSearch, FileBarChart2,
+  ClipboardList, FileBarChart2,
   Star,
   Plus
 } from 'lucide-react';
@@ -21,6 +19,7 @@ export interface NavigationItem {
 // Role constants for better maintainability
 export const ROLES = {
   ADMIN: 'admin',
+  MANAGER: 'manager',
   FINANCE: 'finance',
   SALES_MANAGER: 'sales_manager',
   SALES_EXEC: 'sales_exec',
@@ -105,16 +104,7 @@ export const employeeNavigation: NavigationItem[] = [
   createNavItem('Documents', '/employee/documents', FileText, [ROLES.EMPLOYEE])
 ];
 
-// Navigation map for ProtectedRouteLayout
-const navigationMap: Record<string, NavigationItem[]> = {
-  [ROLES.ADMIN]: adminNavigation, // Admin sees both admin and finance nav
-  [ROLES.FINANCE]: financeNavigation,
-  [ROLES.SALES_MANAGER]: salesNavigation,
-  [ROLES.SALES_EXEC]: salesNavigation,
-  [ROLES.CUSTOMER]: customerNavigation,
-  [ROLES.HR]: hrNavigation,
-  [ROLES.EMPLOYEE]: employeeNavigation,
-};
+
 
 export const getNavigationForRole = (role: string): NavigationItem[] => {
   switch (role) {

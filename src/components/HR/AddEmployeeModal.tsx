@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { X, User, Mail, Phone, Building2, DollarSign, Calendar, Users, Plus, Loader2 } from 'lucide-react';
-import { Employee, Address, EmergencyContact, Document } from '../../types/HR';
+import { Employee, Address, EmergencyContact } from '../../types/HR';
 
-type EmployeeFormData = Omit<Employee, 'id' | '_id' | 'user' | 'employeeId' | 'hireDate' | 'avatar' | 'documents'> & {
+type EmployeeFormData = Omit<Employee, 'id' | '_id' | 'user' | 'employeeId' | 'hireDate' | 'avatar' | 'documents' | 'department'> & {
   dateOfJoining?: string | Date;
   address: Address;
   emergencyContact: EmergencyContact;
+  department: string;
 };
 
 interface AddEmployeeModalProps {
@@ -17,7 +18,7 @@ interface AddEmployeeModalProps {
   isLoading: boolean;
 }
 
-const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
+export const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
   isOpen,
   onClose,
   onSubmit,
@@ -468,7 +469,7 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
                       >
                         <option value="">Select Department</option>
                         {departments.map((dept) => (
-                          <option key={dept.id} value={dept.name}>
+                          <option key={dept.id} value={dept.id}>
                             {dept.name}
                           </option>
                         ))}
@@ -597,5 +598,3 @@ const AddEmployeeModal: React.FC<AddEmployeeModalProps> = ({
     </div>
   );
 };
-
-export default AddEmployeeModal;

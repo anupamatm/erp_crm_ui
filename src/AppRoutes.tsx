@@ -59,9 +59,8 @@ import HRDashboard from './pages/HR/HRDashboard';
 import Employees from './pages/HR/Employees';
 import Attendance from './pages/HR/Attendance';
 import Departments from './pages/HR/Departments';
-import LeaveManagement from './pages/HR/LeaveManagement';
 import Payroll from './pages/HR/Payroll';
-import Performance from './pages/HR/Performance';
+
 
 // Employee Components
 import EmployeeLayout from './components/Employee/EmployeeLayout';
@@ -84,6 +83,9 @@ import { CategoryList, CategoryForm } from './pages/Products/Categories';
 import FReports from './pages/Finance/FReports';
 import FAccounts from './pages/Finance/FAccounts';
 import FTransactions from './pages/Finance/FTransactions';
+import HRLeaveManagement from './pages/HR/HRLeaveManagement';
+import PerformanceManagement from './pages/HR/PerformanceManagement';
+import RecruitmentPage from './pages/HR/RecruitmentPage';
 
 export default function AppRoutes() {
 
@@ -177,7 +179,7 @@ export default function AppRoutes() {
               <Route path="attendance" element={<Attendance />} />
               <Route path="departments" element={<Departments />} />
               <Route path="leaves">
-                <Route index element={<LeaveManagement />} />
+                <Route index element={<HRLeaveManagement />} />
                 {/* <Route path="new" element={<LeaveForm />} />
                 <Route path=":id" element={<LeaveView />} />
                 <Route path=":id/edit" element={<LeaveForm />} /> */}
@@ -189,13 +191,21 @@ export default function AppRoutes() {
                 <Route path=":id/edit" element={<PayrollForm />} /> */}
               </Route>
               <Route path="performance">
-                <Route index element={<Performance />} />
+                <Route index element={<PerformanceManagement />} />
                 {/* <Route path="new" element={<PerformanceForm />} />
                 <Route path=":id" element={<PerformanceView />} />
                 <Route path=":id/edit" element={<PerformanceForm />} /> */}
               </Route>
+              <Route path="recruitment">
+                <Route index element={<RecruitmentPage />} />
+                {/* <Route path="new" element={<RecruitmentForm />} />
+                <Route path=":id" element={<RecruitmentView />} />
+                <Route path=":id/edit" element={<RecruitmentForm />} /> */}
+              </Route>
             </Route>
           </Route>
+
+         
 
           {/* Sales Routes - Protected for admin and sales roles */}
           <Route 

@@ -7,6 +7,7 @@ import {
   PayrollRecord,
   PerformanceReview,
   Candidate,
+  PaySlip,
 } from '../types/HR';
 
 const BASE_PATH = '/api/hr';
@@ -14,8 +15,7 @@ const BASE_PATH = '/api/hr';
 export const employeeService = {
   getAll: async (): Promise<Employee[]> => {
     try {
-      // Use the basic employee list endpoint
-      const res = await API.get(`${BASE_PATH}/employees/basic`);
+      const res = await API.get(`${BASE_PATH}/employees`);
       return res.data;
     } catch (error: any) {
       console.error('Error fetching employees:', {
@@ -105,6 +105,10 @@ export const departmentService = {
 };
 
 export const attendanceService = {
+  getSummary: async (date: string): Promise<Employee[]> => {
+    const res = await API.get(`${BASE_PATH}/attendance/summary`, { params: { date } });
+    return res.data;
+  },
   getAll: async (params?: any): Promise<Attendance[]> => {
     const res = await API.get(`${BASE_PATH}/attendance`, { params });
     return res.data;
@@ -115,6 +119,14 @@ export const attendanceService = {
   },
   create: async (data: Partial<Attendance>): Promise<Attendance> => {
     const res = await API.post(`${BASE_PATH}/attendance`, data);
+    return res.data;
+  },
+  clockIn: async (): Promise<any> => {
+    const res = await API.post(`${BASE_PATH}/attendance/clockin`);
+    return res.data;
+  },
+  clockOut: async (): Promise<any> => {
+    const res = await API.post(`${BASE_PATH}/attendance/clockout`);
     return res.data;
   },
   update: async (id: string, data: Partial<Attendance>): Promise<Attendance> => {
@@ -147,8 +159,19 @@ export const payrollService = {
     const res = await API.get(`${BASE_PATH}/payroll`, { params });
     return res.data;
   },
-  process: async (data: { employeeIds: string[]; period: string }): Promise<{ message: string }> => {
+  process: async (data: { payrollIds: string[]; status: string }): Promise<{ message: string }> => {
     const res = await API.post(`${BASE_PATH}/payroll/process`, data);
+    return res.data;
+  },
+  export: async (params: { month: number; year: number }): Promise<Blob> => {
+    const res = await API.get(`${BASE_PATH}/payroll/export`, {
+        params,
+        responseType: 'blob',
+    });
+    return res.data;
+  },
+    getPaySlip: async (id: string): Promise<PaySlip> => {
+    const res = await API.get(`${BASE_PATH}/payroll/payslip/${id}`);
     return res.data;
   },
 };

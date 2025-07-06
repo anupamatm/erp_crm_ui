@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Navigate, Link } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { CircuitBoard } from 'lucide-react';
 import { useAuth } from '../lib/auth';
 
@@ -7,22 +7,23 @@ const Login = () => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
-  const { signIn, user, loading } = useAuth();
-
-  if (user && !loading) {
-    // Redirect based on user role
-    console.log('User:', user);
-
-    if (user.role === 'customer') {
-      return <Navigate to="/customer" replace />;
-    }
-    return <Navigate to="/" replace />;
-  }
+  const { signIn } = useAuth();
+  const navigate = useNavigate();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     try {
-      await signIn(email, password);
+      const user = await signIn(email, password);
+      if (user) {
+        // Redirect based on user role
+        if (user.role === 'hr') {
+          navigate('/hr', { replace: true });
+        } else if (user.role === 'customer') {
+          navigate('/customer', { replace: true });
+        } else {
+          navigate('/', { replace: true });
+        }
+      }
     } catch (error) {
       setError('Invalid login credentials');
     }

@@ -1,15 +1,15 @@
 import React, { useState, useEffect } from 'react';
 import { Search, Plus, Loader2, AlertCircle, CheckCircle, Trash2, Copy, Check } from 'lucide-react';
 import { employeeService, departmentService } from '../../services/hrService';
-import AddEmployeeModal from '../../components/HR/AddEmployeeModal';
+import { AddEmployeeModal } from '../../components/HR/AddEmployeeModal';
 import { Employee as EmployeeType, Address, EmergencyContact } from '../../types/HR';
 import { Dialog, Transition } from '@headlessui/react';
 
-interface Employee extends Omit<EmployeeType, 'status'> {
+interface Employee extends Omit<EmployeeType, 'status' | 'department'> {
   _id: string;
   employeeId: string;
   dateOfJoining: string | Date;
-  department: string;
+  department: string | { _id: string; name: string };
   status: 'active' | 'inactive' | 'terminated' | 'on-leave';
   user?: {
     _id: string;
@@ -38,15 +38,17 @@ const Employees: React.FC = (): JSX.Element => {
     const [credentials, setCredentials] = useState<{email: string; password: string} | null>(null);
     const [copied, setCopied] = useState(false);
 
-    // Fetch employees
+    // Fetch initial data
     useEffect(() => {
-        const fetchEmployees = async () => {
+        const fetchData = async () => {
             try {
-                console.log('Fetching employees...');
-                const data = await employeeService.getAll();
-                console.log('Employees data received:', data);
-                // Ensure all employees have required fields
-                const employeesWithDefaults: Employee[] = data.map((emp: any) => ({
+                setIsLoading(true);
+                const [employeesData, departmentsData] = await Promise.all([
+                    employeeService.getAll(),
+                    departmentService.getAll()
+                ]);
+
+                const employeesWithDefaults: Employee[] = employeesData.map((emp: any) => ({
                     ...emp,
                     _id: emp._id || '',
                     employeeId: emp.employeeId || '',
@@ -64,47 +66,23 @@ const Employees: React.FC = (): JSX.Element => {
                     documents: emp.documents || []
                 }));
                 setEmployees(employeesWithDefaults);
+
+                const departmentOptions = departmentsData
+                    .filter(d => d._id)
+                    .map(d => ({ id: d._id!, name: d.name }));
+                setDepartments(departmentOptions);
+
                 setError(null);
             } catch (err: any) {
-                console.error('Error fetching employees:', {
-                    error: err,
-                    response: err.response?.data,
-                    status: err.response?.status,
-                    config: {
-                        url: err.config?.url,
-                        method: err.config?.method,
-                        headers: err.config?.headers,
-                    },
-                });
-
-                let errorMessage = 'Failed to fetch employees. ';
+                let errorMessage = 'Failed to fetch data. ';
                 if (err.response?.data?.message) {
                     errorMessage += err.response.data.message;
                 } else if (err.message) {
                     errorMessage += err.message;
-                } else {
-                    errorMessage += 'Please check your network connection and try again.';
                 }
-
                 setError(errorMessage);
             } finally {
                 setIsLoading(false);
-            }
-        };
-
-        const fetchData = async () => {
-            try {
-                await Promise.all([
-                    fetchEmployees(),
-                    departmentService.getAll().then(depts => {
-                        setDepartments(depts.map(dept => ({
-                            id: dept.id,
-                            name: dept.name
-                        })));
-                    })
-                ]);
-            } catch (error) {
-                console.error('Error fetching data:', error);
             }
         };
 
@@ -118,8 +96,7 @@ const Employees: React.FC = (): JSX.Element => {
                 const fullName = `${employee.firstName || ''} ${employee.lastName || ''}`.toLowerCase().trim();
                 const empId = employee.employeeId ? employee.employeeId.toString().toLowerCase() : '';
                 const empEmail = employee.email ? employee.email.toLowerCase() : '';
-                const empDept = employee.department || '';
-                const empStatus = employee.status || '';
+                const departmentName = typeof employee.department === 'object' && employee.department !== null ? employee.department.name : employee.department || '';
 
                 // Only perform search if there's a search term
                 const matchesSearch = searchTerm === '' || 
@@ -129,11 +106,11 @@ const Employees: React.FC = (): JSX.Element => {
 
                 // Handle department filter
                 const matchesDepartment = !filterDepartment || 
-                    empDept.toLowerCase() === filterDepartment.toLowerCase();
+                    departmentName.toLowerCase() === filterDepartment.toLowerCase();
 
                 // Handle status filter
                 const matchesStatus = !filterStatus || 
-                    empStatus.toLowerCase() === filterStatus.toLowerCase();
+                    employee.status.toLowerCase() === filterStatus.toLowerCase();
 
                 return matchesSearch && matchesDepartment && matchesStatus;
             } catch (error) {
@@ -143,32 +120,30 @@ const Employees: React.FC = (): JSX.Element => {
         });
     }, [employees, searchTerm, filterDepartment, filterStatus]);
 
-    // Helper function to get status color class
-    const getStatusColor = (status: string) => {
-        switch (status) {
-            case 'active':
-                return 'bg-green-100 text-green-800';
-            case 'inactive':
-                return 'bg-yellow-100 text-yellow-800';
-            case 'terminated':
-                return 'bg-red-100 text-red-800';
-            default:
-                return 'bg-gray-100 text-gray-800';
-        }
-    };
+    
 
-    const handleAddEmployee = async (employeeData: Omit<Employee, 'id' | '_id' | 'user' | 'employeeId' | 'hireDate' | 'avatar' | 'manager' | 'documents'> & { 
+    const handleAddEmployee = async (employeeData: Omit<Employee, 'id' | '_id' | 'user' | 'employeeId' | 'hireDate' | 'avatar' | 'manager' | 'documents' | 'department'> & { 
+      department: string;
       dateOfJoining?: string | Date;
       address: Address;
       emergencyContact: EmergencyContact;
     }) => {
         try {
             setIsLoading(true);
+
+            // The employeeData.department already holds the department ID from the form
+            if (!employeeData.department) {
+                setError('Department is required.');
+                setIsLoading(false);
+                return;
+            }
+
             const response = await employeeService.create({
                 ...employeeData,
                 status: 'active',
-                department: employeeData.department || 'Unassigned',
-                dateOfJoining: employeeData.dateOfJoining || new Date().toISOString()
+                // department is already the ID from the form, so we pass it directly
+                department: employeeData.department,
+                dateOfJoining: employeeData.dateOfJoining || new Date().toISOString(),
             });
             
             console.log('Employee creation response:', response);
@@ -178,6 +153,7 @@ const Employees: React.FC = (): JSX.Element => {
                 ...response,
                 _id: response._id || '',
                 employeeId: response.employeeId || `EMP${Math.floor(1000 + Math.random() * 9000)}`,
+                dateOfJoining: response.dateOfJoining || new Date().toISOString(),
                 status: 'active',
                 hireDate: new Date().toISOString(),
                 location: response.location || '',
@@ -362,7 +338,7 @@ const Employees: React.FC = (): JSX.Element => {
                                             {employee.employeeId}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                                            {employee.department}
+                                            {typeof employee.department === 'object' && employee.department !== null ? employee.department.name : employee.department}
                                         </td>
                                         <td className="px-6 py-4 whitespace-nowrap">
                                             <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${
@@ -436,7 +412,7 @@ const Employees: React.FC = (): JSX.Element => {
                             leaveFrom="opacity-100"
                             leaveTo="opacity-0"
                         >
-                            <Dialog.Overlay className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
+                            <div className="fixed inset-0 bg-gray-500 bg-opacity-75 transition-opacity" />
                         </Transition.Child>
 
                         <span className="hidden sm:inline-block sm:align-middle sm:h-screen" aria-hidden="true">

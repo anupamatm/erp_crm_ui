@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { X, Calendar, Loader2, UserPlus } from 'lucide-react';
-import { format, isWeekend, addDays, differenceInDays } from 'date-fns';
-import { employeeService } from '../../services/hrService';
+import { Calendar, Loader2 } from 'lucide-react';
+import { format, isWeekend } from 'date-fns';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
 import { Label } from '../ui/label';
@@ -9,33 +8,24 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '.
 import { Textarea } from '../ui/textarea';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter } from '../ui/CustomDialog';
 
-
-
-interface TeamMember {
-  _id: string;
-  name: string;
-  email: string;
-  employeeId: string;
-  department?: string;
-  position?: string;
-}
-
 interface LeaveRequestModalProps {
   isOpen: boolean;
   onClose: () => void;
   onSubmit: (data: any) => void;
-  isAdmin?: boolean;
-  isCreatingForOthers?: boolean;
-  teamMembers?: TeamMember[];
+  userId: string;
+  isCreatingForOther?: boolean;
+  teamMembers?: { _id: string; name: string }[];
+  isSubmitting?: boolean;
 }
 
 const LeaveRequestModal: React.FC<LeaveRequestModalProps> = ({
   isOpen,
   onClose,
   onSubmit,
-  isAdmin = false,
-  isCreatingForOthers = false,
-  teamMembers = []
+  userId,
+  isCreatingForOther = false,
+  teamMembers = [],
+  isSubmitting = false
 }) => {
   const [formData, setFormData] = useState({
     employeeId: '',
@@ -46,92 +36,46 @@ const LeaveRequestModal: React.FC<LeaveRequestModalProps> = ({
     days: 1,
   });
 
-  const [employees, setEmployees] = useState<HREmployee[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [selectedEmployee, setSelectedEmployee] = useState<TeamMember | null>(null);
-  
-  // Mock HREmployee type since we're not importing it
-  interface HREmployee {
-    _id: string;
-    firstName: string;
-    lastName: string;
-    email: string;
-    position: string;
-  }
+  const [selectedEmployee, setSelectedEmployee] = useState<string>('');
 
   useEffect(() => {
-    const fetchEmployees = async () => {
-      if (!isOpen) return;
-      
-      try {
-        setIsLoading(true);
-        setError(null);
-        
-        if (isAdmin && isCreatingForOthers && teamMembers.length > 0) {
-          setEmployees(teamMembers.map(member => ({
-            _id: member._id,
-            firstName: member.name.split(' ')[0],
-            lastName: member.name.split(' ').slice(1).join(' '),
-            email: member.email,
-            employeeId: member.employeeId,
-            department: member.department || '',
-            position: member.position || '',
-          })));
-        } else {
-          const data = await employeeService.getAll();
-          setEmployees(data);
-        }
-      } catch (err) {
-        console.error('Error fetching employees:', err);
-        setError('Failed to load employee list. Please try again.');
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    fetchEmployees();
-  }, [isOpen]);
+    if (isOpen) {
+      // Reset form when modal opens
+      setFormData({
+        employeeId: '',
+        type: 'vacation',
+        startDate: format(new Date(), 'yyyy-MM-dd'),
+        endDate: format(new Date(), 'yyyy-MM-dd'),
+        reason: '',
+        days: 1,
+      });
+      setError(null);
+      setSelectedEmployee(isCreatingForOther ? '' : userId);
+    }
+  }, [isOpen, isCreatingForOther, userId]);
 
   const calculateWorkingDays = (start: Date, end: Date): number => {
+    if (!start || !end || start > end) return 0;
     let count = 0;
     const current = new Date(start);
-    
     while (current <= end) {
       if (!isWeekend(current)) {
         count++;
       }
       current.setDate(current.getDate() + 1);
     }
-    
     return count;
   };
 
-  const handleDateChange = (field: 'startDate' | 'endDate', value: string) => {
-    const newFormData = { ...formData, [field]: value };
-    
-    if (field === 'startDate' && new Date(value) > new Date(newFormData.endDate)) {
-      newFormData.endDate = value;
-    }
-    
-    const start = new Date(newFormData.startDate);
-    const end = new Date(newFormData.endDate);
+  useEffect(() => {
+    const start = new Date(formData.startDate);
+    const end = new Date(formData.endDate);
     const days = calculateWorkingDays(start, end);
-    
-    setFormData({
-      ...newFormData,
-      days: days > 0 ? days : 1
-    });
-  };
+    setFormData(prev => ({ ...prev, days: days > 0 ? days : 1 }));
+  }, [formData.startDate, formData.endDate]);
 
-  const handleChange = (e: React.ChangeEvent<HTMLSelectElement | HTMLTextAreaElement>) => {
-    const { name, value } = e.target;
-    setFormData(prev => ({
-      ...prev,
-      [name]: value
-    }));
-  };
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -142,37 +86,24 @@ const LeaveRequestModal: React.FC<LeaveRequestModalProps> = ({
     }
     
     if (new Date(formData.startDate) > new Date(formData.endDate)) {
-      setError('End date cannot be before start date');
+      setError('Start date cannot be after end date.');
       return;
     }
-    
+
+    if (isCreatingForOther && !selectedEmployee) {
+      setError('Please select an employee.');
+      return;
+    }
+
     try {
-      setIsSubmitting(true);
-      setError(null);
-      
-      const start = new Date(formData.startDate);
-      const end = new Date(formData.endDate);
-      let days = 0;
-      
-      for (let d = new Date(start); d <= end; d.setDate(d.getDate() + 1)) {
-        if (d.getDay() !== 0 && d.getDay() !== 6) { 
-          days++;
-        }
-      }
-      
-      const submitData = {
+      const submissionData = {
         ...formData,
-        days,
-        employeeId: isCreatingForOthers ? formData.employeeId : undefined
+        employeeId: isCreatingForOther ? selectedEmployee : userId,
       };
-      
-      await onSubmit(submitData);
-      onClose();
+      await onSubmit(submissionData);
     } catch (err) {
-      console.error('Error submitting leave request:', err);
-      setError('Failed to submit leave request. Please try again.');
-    } finally {
-      setIsSubmitting(false);
+      console.error('Failed to submit leave request:', err);
+      setError('An error occurred while submitting the request. Please try again.');
     }
   };
 
@@ -201,68 +132,55 @@ const LeaveRequestModal: React.FC<LeaveRequestModalProps> = ({
   }, [formData.startDate, formData.endDate]);
   
   useEffect(() => {
-    if (isCreatingForOthers && teamMembers.length > 0 && !formData.employeeId) {
+    if (isCreatingForOther && teamMembers.length > 0 && !formData.employeeId) {
       setFormData(prev => ({
         ...prev,
         employeeId: teamMembers[0]?._id || ''
       }));
     }
-  }, [isCreatingForOthers, teamMembers]);
+  }, [isCreatingForOther, teamMembers]);
 
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-[600px]">
         <DialogHeader>
-          <DialogTitle>
-            {isCreatingForOthers ? 'Create Leave Request for Team Member' : 'New Leave Request'}
-          </DialogTitle>
+          <DialogTitle>{isCreatingForOther ? 'Create Leave for Team Member' : 'New Leave Request'}</DialogTitle>
           <DialogDescription>
-            {isCreatingForOthers 
-              ? 'Fill in the details to create a leave request on behalf of a team member.'
-              : 'Submit a new leave request with the details below.'}
+            {isCreatingForOther ? 'Select an employee and fill out the form to create a leave request on their behalf.' : 'Fill out the form to request time off.'}
           </DialogDescription>
         </DialogHeader>
         
         {error && (
-          <div className="p-4 bg-red-50 text-red-700 rounded-md text-sm">
+          <div>
             {error}
           </div>
         )}
         
-        <form onSubmit={handleSubmit} className="space-y-6 py-2">
+        <form onSubmit={handleSubmit}>
+          {isCreatingForOther && teamMembers && (
+            <div>
+              <label>Employee</label>
+              <Select onValueChange={setSelectedEmployee} value={selectedEmployee}>
+                <SelectTrigger>
+                  <SelectValue placeholder="Select an employee" />
+                </SelectTrigger>
+                <SelectContent>
+                  {teamMembers.map(member => (
+                    <SelectItem key={member._id} value={member._id}>{member.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          )}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-            {/* Employee Selector (only for HR creating for others) */}
-            {isCreatingForOthers && (
-              <div className="md:col-span-2">
-                <Label htmlFor="employee">Team Member</Label>
-                <Select
-                  value={formData.employeeId}
-                  onValueChange={(value) => setFormData({...formData, employeeId: value})}
-                  disabled={isLoading}
-                >
-                  <SelectTrigger>
-                    <SelectValue placeholder="Select team member" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {teamMembers.map((member) => (
-                      <SelectItem key={member._id} value={member._id}>
-                        <div className="flex items-center gap-2">
-                          <UserIcon className="h-4 w-4" />
-                          <span>{member.name} ({member.employeeId})</span>
-                        </div>
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            )}
+
             
             {/* Leave Type */}
             <div>
               <Label htmlFor="type">Leave Type</Label>
               <Select
                 value={formData.type}
-                onValueChange={(value) => setFormData({...formData, type: value})}
+                onValueChange={(value) => setFormData({ ...formData, type: value as typeof formData.type })}
               >
                 <SelectTrigger>
                   <SelectValue placeholder="Select leave type" />
@@ -279,27 +197,25 @@ const LeaveRequestModal: React.FC<LeaveRequestModalProps> = ({
             
             {/* Days (readonly, calculated) */}
             <div>
-              <Label htmlFor="days">Working Days</Label>
+              <Label>Working Days</Label>
               <Input
-                id="days"
                 type="number"
                 value={formData.days}
-                readOnly
-                className="bg-gray-50"
+                inputProps={{ readOnly: true }}
+                sx={{ backgroundColor: '#f9fafb' }}
               />
             </div>
             
             {/* Start Date */}
             <div>
-              <Label htmlFor="startDate">Start Date</Label>
+              <Label>Start Date</Label>
               <div className="relative">
                 <Input
-                  id="startDate"
                   type="date"
                   value={formData.startDate}
                   onChange={(e) => setFormData({...formData, startDate: e.target.value})}
-                  min={format(new Date(), 'yyyy-MM-dd')}
-                  className="pl-10"
+                  inputProps={{ min: format(new Date(), 'yyyy-MM-dd') }}
+                  sx={{ paddingLeft: '2.5rem' }}
                 />
                 <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
               </div>
@@ -307,15 +223,14 @@ const LeaveRequestModal: React.FC<LeaveRequestModalProps> = ({
             
             {/* End Date */}
             <div>
-              <Label htmlFor="endDate">End Date</Label>
+              <Label>End Date</Label>
               <div className="relative">
                 <Input
-                  id="endDate"
                   type="date"
                   value={formData.endDate}
                   onChange={(e) => setFormData({...formData, endDate: e.target.value})}
-                  min={formData.startDate}
-                  className="pl-10"
+                  inputProps={{ min: formData.startDate }}
+                  sx={{ paddingLeft: '2.5rem' }}
                 />
                 <Calendar className="absolute left-3 top-2.5 h-4 w-4 text-gray-500" />
               </div>
@@ -328,7 +243,7 @@ const LeaveRequestModal: React.FC<LeaveRequestModalProps> = ({
             <Textarea
               id="reason"
               value={formData.reason}
-              onChange={(e) => setFormData({...formData, reason: e.target.value})}
+              onChange={(e: React.ChangeEvent<HTMLTextAreaElement>) => setFormData({...formData, reason: e.target.value})}
               placeholder="Enter the reason for leave"
               className="min-h-[100px]"
               required
@@ -338,7 +253,7 @@ const LeaveRequestModal: React.FC<LeaveRequestModalProps> = ({
           <DialogFooter>
             <Button
               type="button"
-              variant="outline"
+              variant="outlined"
               onClick={onClose}
               disabled={isSubmitting}
             >
@@ -348,11 +263,11 @@ const LeaveRequestModal: React.FC<LeaveRequestModalProps> = ({
               {isSubmitting ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                  {isCreatingForOthers ? 'Creating...' : 'Submitting...'}
+                  {isCreatingForOther ? 'Creating...' : 'Submitting...'}
                 </>
               ) : (
                 <>
-                  {isCreatingForOthers ? 'Create Request' : 'Submit Request'}
+                  {isCreatingForOther ? 'Create Request' : 'Submit Request'}
                 </>
               )}
             </Button>

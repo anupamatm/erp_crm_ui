@@ -1,5 +1,5 @@
 import React, { useEffect, useState, useCallback, useMemo } from 'react';
-import { employeeService, attendanceService, departmentService } from '../../services/hrService';
+import { attendanceService, departmentService } from '../../services/hrService';
 import { format } from 'date-fns';
 import { toast } from 'react-toastify';
 import { CheckCircle, XCircle, AlertCircle, Loader2, Clock4, CalendarClock, Download, Clock } from 'lucide-react';
@@ -27,10 +27,10 @@ const StatCard: React.FC<StatCardProps> = ({ icon, title, value, color }) => {
   );
 };
 
-type AttendanceStatus = 'present' | 'late' | 'absent' | 'half-day' | 'on-leave';
+
 
 interface Department {
-  id: string;
+  id?: string;
   name: string;
   [key: string]: any;
 }
@@ -47,7 +47,7 @@ interface Attendance {
 }
 
 interface Employee {
-  id: string;
+  id?: string;
   _id?: string;
   firstName: string;
   lastName: string;
@@ -80,6 +80,7 @@ const Attendance: React.FC = () => {
   const [searchQuery, setSearchQuery] = useState<string>('');
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
+  const [refetch, setRefetch] = useState(false);
   const [stats, setStats] = useState<AttendanceStats>({
     present: 0,
     late: 0,
@@ -115,7 +116,6 @@ const Attendance: React.FC = () => {
     return newStats;
   }, []);
 
-  // Fetch departments on component mount
   useEffect(() => {
     const fetchDepartments = async () => {
       try {
@@ -126,95 +126,20 @@ const Attendance: React.FC = () => {
         toast.error('Failed to load departments');
       }
     };
-    
+
     fetchDepartments();
   }, []);
 
-  // Fetch attendance data when component mounts or date changes
   useEffect(() => {
     const fetchData = async () => {
       try {
         setLoading(true);
         setError(null);
-        
-        const [employeesData, attendanceData] = await Promise.all([
-          employeeService.getAll(),
-          attendanceService.getAll({ date: selectedDate })
-        ]) as [any[], any[]];
-
-        // Map attendance data to employees
-        const formattedEmployees = employeesData.map((emp: any) => {
-          const attendance = Array.isArray(attendanceData) 
-            ? attendanceData.find((a: any) => a.employeeId === emp.id || a.employeeId === emp._id)
-            : null;
-          return {
-            ...emp,
-            status: (attendance?.status as AttendanceStatus) || 'absent',
-            checkIn: attendance?.checkIn,
-            checkOut: attendance?.checkOut,
-            workingHours: attendance?.workingHours
-          } as Employee;
-        });
-
-        setEmployees(formattedEmployees);
-      } catch (error) {
-        const err = error as Error;
-        console.error('Error fetching data:', err);
-        setError('Failed to load attendance data');
-        toast.error('Failed to load attendance data');
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    fetchData();
-  }, [selectedDate]);
-
-  // Fetch departments on component mount
-  useEffect(() => {
-    const fetchDepartments = async () => {
-      try {
-        const depts = await departmentService.getAll();
-        setDepartments(depts);
-      } catch (error) {
-        console.error('Error fetching departments:', error);
-        toast.error('Failed to load departments');
-      }
-    };
-    
-    fetchDepartments();
-  }, []);
-
-  // Fetch attendance data when component mounts or date changes
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        setLoading(true);
-        setError(null);
-        
-        const [employeesData, attendanceData] = await Promise.all([
-          employeeService.getAll(),
-          attendanceService.getAll({ date: selectedDate })
-        ]) as [any[], any[]];
-
-        // Map attendance data to employees
-        const employeesWithAttendance = employeesData.map((emp: any) => {
-          const attendance = Array.isArray(attendanceData) 
-            ? attendanceData.find((a: any) => a.employeeId === emp.id || a.employeeId === emp._id)
-            : null;
-          return {
-            ...emp,
-            status: (attendance?.status as AttendanceStatus) || 'absent',
-            checkIn: attendance?.checkIn,
-            checkOut: attendance?.checkOut,
-            workingHours: attendance?.workingHours
-          } as Employee;
-        });
-
-        setEmployees(employeesWithAttendance);
+        const summaryData = await attendanceService.getSummary(selectedDate);
+        setEmployees(summaryData);
       } catch (err) {
-        console.error('Error fetching attendance data:', err);
-        setError('Failed to load attendance data');
+        console.error('Error fetching attendance summary:', err);
+        setError('Failed to load attendance data. Please try again.');
         toast.error('Failed to load attendance data');
       } finally {
         setLoading(false);
@@ -222,9 +147,35 @@ const Attendance: React.FC = () => {
     };
 
     fetchData();
-  }, [selectedDate]);
+  }, [selectedDate, refetch]);
+
+  useEffect(() => {
+    const currentEmployees = selectedDepartment ? employees.filter(emp => getDepartmentName(emp.department) === selectedDepartment) : employees;
+    const newStats = calculateStats(currentEmployees);
+    setStats(newStats);
+  }, [employees, selectedDepartment, calculateStats, getDepartmentName]);
 
   // Filter employees by selected department and search query
+  const handleClockIn = async () => {
+    try {
+      const response = await attendanceService.clockIn();
+      toast.success(response.message || 'Clocked in successfully!');
+      setRefetch(prev => !prev);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Clock in failed.');
+    }
+  };
+
+  const handleClockOut = async () => {
+    try {
+      const response = await attendanceService.clockOut();
+      toast.success(response.message || 'Clocked out successfully!');
+      setRefetch(prev => !prev);
+    } catch (error: any) {
+      toast.error(error.response?.data?.message || 'Clock out failed.');
+    }
+  };
+
   const filteredEmployees = useMemo(() => {
     let result = [...employees];
     
@@ -514,7 +465,7 @@ const Attendance: React.FC = () => {
             <Clock className="w-12 h-12 text-green-600 mx-auto mb-4" />
             <h4 className="text-lg font-semibold text-gray-900 mb-2">Clock In</h4>
             <p className="text-sm text-gray-600 mb-4">Start your work day</p>
-            <button className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors">
+            <button onClick={handleClockIn} className="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded-lg transition-colors">
               Clock In Now
             </button>
           </div>
@@ -522,7 +473,7 @@ const Attendance: React.FC = () => {
             <Clock className="w-12 h-12 text-red-600 mx-auto mb-4" />
             <h4 className="text-lg font-semibold text-gray-900 mb-2">Clock Out</h4>
             <p className="text-sm text-gray-600 mb-4">End your work day</p>
-            <button className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors">
+            <button onClick={handleClockOut} className="bg-red-600 hover:bg-red-700 text-white px-6 py-2 rounded-lg transition-colors">
               Clock Out Now
             </button>
           </div>

@@ -12,6 +12,7 @@ interface InputProps {
   helperText?: string;
   disabled?: boolean;
   sx?: any;
+  inputProps?: React.InputHTMLAttributes<HTMLInputElement>;
 }
 
 export const Input: React.FC<InputProps> = ({
@@ -25,6 +26,7 @@ export const Input: React.FC<InputProps> = ({
   helperText,
   disabled = false,
   sx,
+  inputProps,
   ...props
 }) => {
   return (
@@ -39,6 +41,7 @@ export const Input: React.FC<InputProps> = ({
       helperText={helperText}
       disabled={disabled}
       sx={sx}
+      inputProps={inputProps}
       {...props}
     />
   );

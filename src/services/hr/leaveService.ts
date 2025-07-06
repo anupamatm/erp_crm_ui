@@ -1,8 +1,14 @@
 import API from '../../api/api';
 
-interface LeaveRequest {
-  id?: string;
-  employee: string;
+interface PopulatedEmployee {
+  _id: string;
+  firstName: string;
+  lastName: string;
+}
+
+export interface LeaveRequest {
+  _id: string;
+  employee: string | PopulatedEmployee;
   type: 'vacation' | 'sick' | 'personal' | 'maternity' | 'paternity';
   startDate: string | Date;
   endDate: string | Date;
@@ -28,6 +34,15 @@ interface LeaveStats {
     paternity: number;
   };
   totalDaysOff: number;
+}
+
+interface TeamMember {
+  _id: string;
+  name: string;
+  email: string;
+  employeeId: string;
+  department?: string;
+  position?: string;
 }
 
 export const leaveService = {
@@ -68,7 +83,7 @@ export const leaveService = {
   },
 
   // Create a new leave request
-  create: async (leaveData: Omit<LeaveRequest, 'id'>): Promise<LeaveRequest> => {
+  create: async (leaveData: Omit<LeaveRequest, '_id'>): Promise<LeaveRequest> => {
     const response = await API.post('/api/hr/leaves', leaveData);
     return response.data;
   },
@@ -86,6 +101,22 @@ export const leaveService = {
   // Delete a leave request
   delete: async (id: string) => {
     await API.delete(`/api/hr/leaves/${id}`);
+  },
+
+  // Get all team members (employees) for admin purposes
+  getTeamMembers: async (): Promise<TeamMember[]> => {
+    try {
+      const response = await API.get('/api/hr/employees');
+      // The component expects 'name', but the employee model has firstName, lastName.
+      // Map the response to the TeamMember structure with a combined 'name' field.
+      return response.data.map((emp: any) => ({
+        ...emp,
+        name: `${emp.firstName} ${emp.lastName}`.trim(),
+      }));
+    } catch (error) {
+      console.error('Error fetching team members:', error);
+      throw error;
+    }
   },
 
   // Get leave statistics - Currently not implemented in the backend

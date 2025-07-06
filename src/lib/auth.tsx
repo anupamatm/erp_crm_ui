@@ -1,7 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { API } from './api';
 
-interface User {
+export interface User {
   id: string;
   email: string;
   role: string;
@@ -13,7 +13,7 @@ interface AuthContextType {
   loading: boolean;
   initialLoad: boolean;
   error: string | null;
-  signIn: (email: string, password: string) => Promise<void>;
+  signIn: (email: string, password: string) => Promise<User>;
   signUp: (email: string, password: string, name: string) => Promise<void>;
   signOut: () => void;
   refresh: () => Promise<void>;
@@ -45,14 +45,16 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setError(null);
         return false;
       }
-      
+
+      // Set the token for the refresh request
+      API.defaults.headers.common['Authorization'] = `Bearer ${token}`;
 
       // Try to refresh token
       try {
         const response = await API.post('/api/auth/refresh');
         localStorage.setItem('token', response.data.token);
         API.defaults.headers.common['Authorization'] = `Bearer ${response.data.token}`;
-        
+        console.log('Token refreshed:', response.data.user);
         setUser(response.data.user);
         setError(null);
         return true;
@@ -115,6 +117,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       if (!response.data.user.id || !response.data.user.role) {
         throw new Error('Invalid user data');
       }
+      return response.data.user;
     } catch (err: any) {
       console.error('Login failed:', err);
       setError(err.response?.data?.message || 'Authentication error');
