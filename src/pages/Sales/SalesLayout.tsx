@@ -15,9 +15,9 @@ const SalesLayout = () => {
   const navItems = [
     { path: '/sales', icon: <LayoutDashboard size={20} />, label: 'Dashboard', exact: true },
     { path: '/sales/quotations', icon: <FileText size={20} />, label: 'Quotations' },
-    { path: '/sales/orders', icon: <ShoppingCart size={20} />, label: 'Orders' },
+    //{ path: '/sales/orders', icon: <ShoppingCart size={20} />, label: 'Orders' },
     // { path: '/sales/opportunities', icon: <Target size={20} />, label: 'Opportunities' },
-    { path: '/sales/invoices', icon: <FileText size={20} />, label: 'Invoices' },
+    //{ path: '/sales/invoices', icon: <FileText size={20} />, label: 'Invoices' },
     { path: '/sales/reports', icon: <TrendingUp size={20} />, label: 'Reports' },
     { path: '/sales/coupons', icon: <FileText size={20} />, label: 'Coupons' },
   ];

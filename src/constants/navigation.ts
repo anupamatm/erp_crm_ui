@@ -25,7 +25,9 @@ export const ROLES = {
   SALES_EXEC: 'sales_exec',
   CUSTOMER: 'customer',
   HR: 'hr',
-  EMPLOYEE: 'employee'
+  EMPLOYEE: 'employee',
+  INVENTORY_MANAGER: 'inventory_mgr',
+  LEAD_MANAGER: 'lead_manager'
 };
 
 // Helper function to create navigation items
@@ -49,7 +51,7 @@ export const adminNavigation: NavigationItem[] = [
   createNavItem('Products', '/products', Package, [ROLES.ADMIN]),
   createNavItem('Finance', '/finance', DollarSign, [ROLES.ADMIN]),
   createNavItem('Sales', '/sales', Briefcase, [ROLES.ADMIN]),
-  createNavItem('Leads', '/leads', ClipboardList, [ROLES.ADMIN]),
+  createNavItem('Leads', '/leads', ClipboardList, [ROLES.ADMIN, ROLES.LEAD_MANAGER]),
   createNavItem('HR', '/hr', Users, [ROLES.ADMIN]),
   createNavItem('Settings', '/settings', Settings, [ROLES.ADMIN]),
 ];
@@ -105,25 +107,54 @@ export const employeeNavigation: NavigationItem[] = [
   createNavItem('Documents', '/employee/documents', FileText, [ROLES.EMPLOYEE])
 ];
 
+// Lead Manager Navigation
+export const leadManagerNavigation: NavigationItem[] = [
+  createNavItem('Leads', '/leads', ClipboardList, [ROLES.LEAD_MANAGER]),
+  // createNavItem('My Profile', '/profile', User, [ROLES.LEAD_MANAGER])
+];
 
+// Inventory Manager Navigation
+export const inventoryManagerNavigation: NavigationItem[] = [
+  //createNavItem('Dashboard', '/inventory', LayoutDashboard, [ROLES.INVENTORY_MANAGER]),
+  createNavItem('Products', '/products', Package, [ROLES.INVENTORY_MANAGER]),
+  //createNavItem('Inventory', '/inventory/items', Package, [ROLES.INVENTORY_MANAGER]),
+  //createNavItem('Categories', '/inventory/categories', ClipboardList, [ROLES.INVENTORY_MANAGER]),
+  //createNavItem('Suppliers', '/inventory/suppliers', Users, [ROLES.INVENTORY_MANAGER])
+];
+
+// Convert role to lowercase and trim for consistent comparison
+const normalizeRole = (role: string): string => {
+  return String(role || '').toLowerCase().trim();
+};
 
 export const getNavigationForRole = (role: string): NavigationItem[] => {
-  switch (role) {
-    case ROLES.ADMIN:
-      // Only return main admin navigation items
+  const normalizedRole = normalizeRole(role);
+  
+  // For debugging
+  console.log('getNavigationForRole - Input role:', role, 'Normalized role:', normalizedRole);
+  
+  switch (normalizedRole) {
+    case normalizeRole(ROLES.ADMIN):
       return adminNavigation;
-    case ROLES.FINANCE:
+    case normalizeRole(ROLES.FINANCE):
       return financeNavigation;
-    case ROLES.SALES_MANAGER:
-    case ROLES.SALES_EXEC:
+    case normalizeRole(ROLES.SALES_MANAGER):
+    case normalizeRole(ROLES.SALES_EXEC):
       return salesNavigation;
-    case ROLES.HR:
+    case normalizeRole(ROLES.LEAD_MANAGER):
+      console.log('Returning lead manager navigation');
+      return leadManagerNavigation;
+    case normalizeRole(ROLES.INVENTORY_MANAGER):
+      console.log('Returning inventory manager navigation');
+      return inventoryManagerNavigation;
+    case normalizeRole(ROLES.HR):
       return hrNavigation;
-    case ROLES.EMPLOYEE:
+    case normalizeRole(ROLES.EMPLOYEE):
       return employeeNavigation;
-    case ROLES.CUSTOMER:
+    case normalizeRole(ROLES.CUSTOMER):
       return customerNavigation;
     default:
+      console.warn('No navigation found for role:', role, 'Normalized:', normalizedRole);
       return [];
   }
 };

@@ -26,7 +26,7 @@ const UserForm = () => {
       await userApi.createUser(formData);
       toast.success('User created successfully');
       navigate('/users');
-    } catch (error) {
+    } catch (error: any) {
       toast.error(error.response?.data?.message || 'Error creating user');
     } finally {
       setLoading(false);
@@ -87,6 +87,7 @@ const UserForm = () => {
               <option value="admin">Admin</option>
               <option value="sales_manager">Sales Manager</option>
               <option value="sales_exec">Sales Executive</option>
+              <option value="lead_manager">Lead Manager</option>
               <option value="inventory_mgr">Inventory Manager</option>
               <option value="support">Support</option>
               <option value="hr">HR</option>

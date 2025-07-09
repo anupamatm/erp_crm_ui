@@ -32,14 +32,25 @@ const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ roles, children }) => {
   }
 
   // Debug log
-  console.log('ProtectedRoute - User role:', user.role, 'Type:', typeof user.role, 'Required roles:', roles);
+  console.log('ProtectedRoute - User object:', user);
+  console.log('User role:', user.role, 'Type:', typeof user.role, 'Required roles:', roles);
   
-  // Check if user has one of the required roles. This is a simple, direct check.
-  const userRole = String(user.role).toLowerCase().trim();
-  const hasRequiredRole = roles.map(role => role.toLowerCase()).includes(userRole);
+  // Normalize role comparison
+  const normalizeRole = (role: string): string => {
+    return String(role || '').toLowerCase().trim();
+  };
+  
+  const userRole = normalizeRole(user.role);
+  const normalizedRoles = roles.map(role => normalizeRole(role));
+  const hasRequiredRole = normalizedRoles.includes(userRole);
+
+  console.log('Normalized user role:', userRole);
+  console.log('Normalized required roles:', normalizedRoles);
+  console.log('Has required role:', hasRequiredRole);
 
   if (!hasRequiredRole) {
-    console.warn(`Access denied. User role: ${user.role}, Required roles: ${roles.join(', ')}`);
+    console.warn(`Access denied. User role: "${user.role}" (normalized: "${userRole}"), Required roles: [${roles.join(', ')}]`);
+    console.warn('User object:', user);
     return <Navigate to="/unauthorized" replace />;
   }
 

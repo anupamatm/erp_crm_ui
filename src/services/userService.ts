@@ -1,4 +1,5 @@
 // src/api/userApi.ts
+import axios from 'axios';
 import API from '../api/api';
 
 export interface PaginatedResponse<T> {
@@ -97,8 +98,49 @@ export const userApi = {
     }
   },
   createUser: async (userData: any) => {
-    const response = await API.post('/api/userManagement/users', userData);
-    return response.data;
+    try {
+      // Ensure we have a token before making the request
+      const token = localStorage.getItem('token');
+      if (!token) {
+        throw new Error('No authentication token found. Please log in again.');
+      }
+      
+      // Create a new axios instance to ensure fresh headers
+      const authAPI = axios.create({
+        baseURL: import.meta.env.VITE_API_URL || 'http://localhost:5007',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        }
+      });
+      
+      // Log the request details
+      console.log('Creating user with data:', userData);
+      
+      const response = await authAPI.post('/api/userManagement/users', userData);
+      
+      console.log('User created successfully:', response.data);
+      return response.data;
+    } catch (error: any) {
+      console.error('Error creating user:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status,
+        config: {
+          url: error.config?.url,
+          method: error.config?.method,
+          headers: error.config?.headers
+        }
+      });
+      
+      if (error.response?.status === 401) {
+        // Clear invalid token and redirect to login
+        localStorage.removeItem('token');
+        window.location.href = '/login';
+      }
+      
+      throw error;
+    }
   },
 
   // Get user by ID

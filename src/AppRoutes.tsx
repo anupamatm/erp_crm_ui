@@ -72,12 +72,14 @@ import EmployeeAttendance from './pages/Employee/AttendanceHistory';
 import UserList from './pages/UserManagement/UserList';
 import UserForm from './pages/UserManagement/UserForm';
 
-// Product Pages
-import ProductsLayout from './pages/Products/ProductsLayout';
+// Products Pages
 import ProductsPage from './pages/Products/ProductsPage';
-import ProductDetails from './pages/Products/ProductDetails';
 import ProductForm from './pages/Products/ProductForm';
+import ProductDetails from './pages/Products/ProductDetails';
 import { CategoryList, CategoryForm } from './pages/Products/Categories';
+import ProductsLayout from './pages/Products/ProductsLayout';
+import ProductRequirements from './pages/Products/ProductRequirements';
+import ProductTraining from './pages/Products/ProductTraining';
 
 // Finance Pages
 import FReports from './pages/Finance/FReports';
@@ -87,6 +89,10 @@ import HRLeaveManagement from './pages/HR/HRLeaveManagement';
 import PerformanceManagement from './pages/HR/PerformanceManagement';
 import RecruitmentPage from './pages/HR/RecruitmentPage';
 import CouponManager from './pages/Sales/CouponManager';
+import InventoryLayout from './pages/Inventory/InventoryLayout';
+import InventoryDashboard from './pages/Inventory/InventoryDashboard';
+import InventoryItems from './pages/Inventory/InventoryItems';
+import ProductSuggestions from './pages/Products/ProductSuggestions';
 
 export default function AppRoutes() {
 
@@ -98,7 +104,7 @@ export default function AppRoutes() {
       <Route path="/unauthorized" element={<Unauthorized />} />
 
       {/* Protected Routes */}
-      <Route element={<ProtectedRoute roles={[ROLES.ADMIN, ROLES.FINANCE, ROLES.SALES_MANAGER, ROLES.SALES_EXEC, ROLES.CUSTOMER, ROLES.HR, ROLES.EMPLOYEE]} />}>
+      <Route element={<ProtectedRoute roles={[ROLES.ADMIN, ROLES.FINANCE, ROLES.SALES_MANAGER, ROLES.SALES_EXEC, ROLES.CUSTOMER, ROLES.HR, ROLES.EMPLOYEE, ROLES.INVENTORY_MANAGER, ROLES.LEAD_MANAGER]} />}>
         <Route path="/" element={<ProtectedRouteLayout />}>
           {/* Redirect to role-specific dashboard */}
           <Route index element={<RedirectByRole />} />
@@ -131,6 +137,31 @@ export default function AppRoutes() {
             <Route path="categories" element={<CategoryList />} />
             <Route path="categories/new" element={<CategoryForm />} />
             <Route path="categories/edit/:id" element={<CategoryForm />} />
+            
+            {/* Product Requirements */}
+            <Route path="requirements" element={<ProductRequirements />} />
+            
+            {/* Product Training */}
+            <Route path="training" element={<ProductTraining />} />
+            
+            {/* Product Suggestions */}
+            <Route path="suggestions" element={<ProductSuggestions />} />
+          </Route>
+          
+          {/* Inventory Routes - Protected for admin and inventory manager roles */}
+          <Route 
+            path="inventory" 
+            element={
+              <ProtectedRoute roles={[ROLES.ADMIN, ROLES.INVENTORY_MANAGER]}>
+                <ProductsLayout />
+              </ProtectedRoute>
+            }
+          >
+            <Route index element={<InventoryDashboard />} />
+            <Route path="items" element={<InventoryItems />} />
+            <Route path="categories" element={<div>Inventory Categories</div>} />
+            <Route path="suppliers" element={<div>Suppliers</div>} />
+            <Route path="*" element={<Navigate to="/inventory" replace />} />
           </Route>
 
           {/* Finance Routes - Protected for both admin and finance roles */}
@@ -261,7 +292,7 @@ export default function AppRoutes() {
           <Route 
             path="leads" 
             element={
-              <ProtectedRoute roles={[ROLES.ADMIN, ROLES.SALES_MANAGER, ROLES.SALES_EXEC]} />
+              <ProtectedRoute roles={[ROLES.ADMIN, ROLES.SALES_MANAGER, ROLES.SALES_EXEC, ROLES.LEAD_MANAGER]} />
             }
           >
             <Route element={<LeadsLayout />}>
