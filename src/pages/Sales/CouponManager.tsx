@@ -126,6 +126,9 @@ const handleSubmit = async (values: any) => {
       setSelectedCoupon(null);
       fetchCoupons();
     } catch (error: any) {
+      if(error.response.status === 400){
+        message.error(error.response?.data?.message);
+      }
       console.error("handleSubmit error:", error.response?.data || error.message || error);
       message.error('Operation failed');
     }
