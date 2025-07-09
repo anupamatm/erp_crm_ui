@@ -74,6 +74,7 @@ export const salesNavigation: NavigationItem[] = [
   createNavItem('Invoices', '/sales/invoices', FileText, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
   createNavItem('Quotations', '/sales/quotations', FileCheck, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
   createNavItem('Orders', '/sales/orders', ShoppingCart, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
+  createNavItem('Coupons', '/sales/coupons', ShoppingCart, [ROLES.SALES_MANAGER, ROLES.SALES_EXEC]),
 ];
 
 // Customer Navigation

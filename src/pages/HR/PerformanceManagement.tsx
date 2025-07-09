@@ -88,12 +88,21 @@ const PerformanceManagement: React.FC = () => {
                   <IconButton size="small" onClick={() => handleOpenModal(review)}>
                     <Edit className="h-4 w-4" />
                   </IconButton>
-                  <IconButton size="small" style={{ color: '#ef4444' }} onClick={async () => {
-                    if (review._id) {
-                      await performanceService.deletePerformanceReview(review._id);
-                      fetchReviews();
-                    }
-                  }}>
+                  <IconButton 
+                    size="small" 
+                    style={{ color: '#ef4444' }} 
+                    onClick={async () => {
+                      if (review._id && window.confirm('Are you sure you want to delete this performance review?')) {
+                        try {
+                          await performanceService.deletePerformanceReview(review._id);
+                          fetchReviews();
+                        } catch (error) {
+                          setError('Failed to delete performance review. Please try again.');
+                          console.error('Delete error:', error);
+                        }
+                      }
+                    }}
+                  >
                     <Trash2 className="h-4 w-4" />
                   </IconButton>
                 </td>

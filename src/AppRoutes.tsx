@@ -86,6 +86,7 @@ import FTransactions from './pages/Finance/FTransactions';
 import HRLeaveManagement from './pages/HR/HRLeaveManagement';
 import PerformanceManagement from './pages/HR/PerformanceManagement';
 import RecruitmentPage from './pages/HR/RecruitmentPage';
+import CouponManager from './pages/Sales/CouponManager';
 
 export default function AppRoutes() {
 
@@ -247,7 +248,14 @@ export default function AppRoutes() {
               <Route path=":id" element={<QuotationForm />} />
               <Route path=":id/edit" element={<QuotationForm />} />
             </Route>
+            
+            {/* Coupon Routes */}
+            <Route path="coupons">
+              <Route index element={<CouponManager />} />
+            </Route>
           </Route>
+          
+        
 
           {/* Leads Routes - Protected for admin and sales roles */}
           <Route 
